@@ -35,3 +35,26 @@ for table_name in tables:
         "Primary Key:",
         primary_key["constrained_columns"]
     )
+
+
+print("\nAccountDevice Foreign Keys:")
+
+foreign_keys = inspector.get_foreign_keys(
+    "account_devices"
+)
+
+for fk in foreign_keys:
+    print(
+        fk["constrained_columns"],
+        "->",
+        fk["referred_table"],
+        fk["referred_columns"]
+    )
+
+
+with engine.connect() as connection:
+    enabled = connection.exec_driver_sql(
+        "PRAGMA foreign_keys"
+    ).scalar()
+
+    print("\nForeign Key enforcement:", enabled)

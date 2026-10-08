@@ -1,5 +1,5 @@
 
-from sqlalchemy import String
+from sqlalchemy import String, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 
 from database import Base
@@ -46,5 +46,27 @@ class Device(Base):
 
     model_version: Mapped[str | None] = mapped_column(
         String(50),
+        nullable=True
+    )
+
+
+class AccountDevice(Base):
+    __tablename__ = "account_devices"
+
+    account_id: Mapped[int] = mapped_column(
+        ForeignKey("accounts.account_id"),
+        primary_key=True,
+        nullable=False
+    )
+
+    device_id: Mapped[str] = mapped_column(
+        String(64),
+        ForeignKey("devices.device_id"),
+        primary_key=True,
+        nullable=False
+    )
+
+    display_name: Mapped[str | None] = mapped_column(
+        String(100),
         nullable=True
     )
