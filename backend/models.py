@@ -28,3 +28,23 @@ class Account(Base):
         String(100),
         nullable=False
     )
+
+
+class Device(Base):
+    __tablename__ = "devices"
+
+    device_id: Mapped[str] = mapped_column(
+        String(64),
+        primary_key=True,
+        nullable=False
+    )
+
+    status: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False
+    )
+
+    model_version: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True
+    )

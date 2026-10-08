@@ -5,21 +5,33 @@ from database import Base, engine
 import models
 
 
+# Tạo những bảng chưa tồn tại
 Base.metadata.create_all(bind=engine)
 
+# Kiểm tra database
 inspector = inspect(engine)
 
-print("Database tables:")
-print(inspector.get_table_names())
+tables = inspector.get_table_names()
 
-print("\nAccount columns:")
+print("Database tables:", tables)
 
-columns = inspector.get_columns("accounts")
+for table_name in tables:
+    print(f"\nTable: {table_name}")
 
-for column in columns:
-    print(
-        column["name"],
-        column["type"],
-        "nullable =", column["nullable"]
+    columns = inspector.get_columns(table_name)
+
+    for column in columns:
+        print(
+            column["name"],
+            column["type"],
+            "nullable =", column["nullable"]
+        )
+
+    primary_key = inspector.get_pk_constraint(
+        table_name
     )
-print(inspector.get_unique_constraints("accounts"))
+
+    print(
+        "Primary Key:",
+        primary_key["constrained_columns"]
+    )
