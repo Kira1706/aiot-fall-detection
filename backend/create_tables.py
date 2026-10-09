@@ -73,3 +73,23 @@ for fk in foreign_keys:
         fk["referred_table"],
         fk["referred_columns"]
     )
+
+
+print("\nModelVersion verification:")
+
+columns = inspector.get_columns("model_versions")
+
+for column in columns:
+    print(
+        column["name"],
+        column["type"],
+        "nullable =", column["nullable"]
+    )
+
+pk = inspector.get_pk_constraint("model_versions")
+
+print("Primary Key:", pk["constrained_columns"])
+
+fks = inspector.get_foreign_keys("model_versions")
+
+print("Foreign Keys:", fks)

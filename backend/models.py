@@ -1,6 +1,14 @@
 
-from sqlalchemy import String, ForeignKey, DateTime, Float
 from datetime import datetime
+
+from sqlalchemy import (
+    String,
+    Text,
+    ForeignKey,
+    DateTime,
+    Float,
+)
+
 from sqlalchemy.orm import Mapped, mapped_column
 
 from database import Base
@@ -105,4 +113,24 @@ class FallEvent(Base):
     confidence: Mapped[float | None] = mapped_column(
         Float,
         nullable=True
+    )
+
+
+class ModelVersion(Base):
+    __tablename__ = "model_versions"
+
+    version: Mapped[str] = mapped_column(
+        String(50),
+        primary_key=True,
+        nullable=False
+    )
+
+    file_path: Mapped[str] = mapped_column(
+        Text,
+        nullable=False
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False
     )
