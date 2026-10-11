@@ -1,40 +1,34 @@
-
 from pwdlib import PasswordHash
 
 
-# Khởi tạo bộ băm mật khẩu với cấu hình được thư viện khuyến nghị.
-# Cấu hình này hiện sử dụng thuật toán Argon2.
+# Khởi tạo công cụ băm mật khẩu bằng cấu hình được khuyến nghị.
+# Thuật toán được sử dụng hiện tại là Argon2.
 password_hasher = PasswordHash.recommended()
 
 
 def hash_password(password: str) -> str:
     """
-    Chuyển mật khẩu gốc thành mã băm để lưu trong Database.
+    Chuyển mật khẩu gốc thành mã băm an toàn.
 
-    Args:
-        password: Mật khẩu gốc do người dùng cung cấp.
-
-    Returns:
-        Chuỗi mã băm dùng để lưu trong accounts.password_hash.
+    Mã băm được sử dụng để lưu vào Database.
+    Không lưu trực tiếp mật khẩu người dùng.
     """
+
     return password_hasher.hash(password)
 
 
 def verify_password(
     password: str,
-    hashed_password: str
+    hashed_password: str,
 ) -> bool:
     """
-    Kiểm tra mật khẩu người dùng nhập có khớp với mã băm không.
+    Kiểm tra mật khẩu người dùng nhập có chính xác hay không.
 
-    Args:
-        password: Mật khẩu người dùng nhập khi đăng nhập.
-        hashed_password: Mã băm lấy từ Database.
-
-    Returns:
-        True nếu mật khẩu đúng, False nếu sai.
+    Trả về True nếu mật khẩu đúng.
+    Trả về False nếu mật khẩu sai.
     """
+
     return password_hasher.verify(
         password,
-        hashed_password
+        hashed_password,
     )
