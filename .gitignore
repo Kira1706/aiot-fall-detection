@@ -1,4 +1,10 @@
+# Môi trường Python.
 .venv/
 __pycache__/
 *.pyc
+
+# Database SQLite trên máy.
 *.db
+
+# File chứa cấu hình bí mật.
+.env
