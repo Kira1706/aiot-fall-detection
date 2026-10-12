@@ -1,3 +1,6 @@
+
+from typing import Literal
+
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -9,11 +12,11 @@ from pydantic import (
 
 class AccountRegisterRequest(BaseModel):
     """
-    Kiểm tra thông tin người chăm sóc gửi lên khi đăng ký.
+    Kiểm tra dữ liệu đăng ký tài khoản người chăm sóc.
 
-    Email phải có định dạng hợp lệ.
-    Mật khẩu phải có độ dài từ 8 đến 128 ký tự.
-    Tên hiển thị phải có độ dài từ 1 đến 100 ký tự.
+    Email phải hợp lệ.
+    Mật khẩu có độ dài từ 8 đến 128 ký tự.
+    Tên hiển thị có độ dài từ 1 đến 100 ký tự.
     """
 
     email: EmailStr
@@ -32,10 +35,9 @@ class AccountRegisterRequest(BaseModel):
     @classmethod
     def validate_display_name(cls, value: str) -> str:
         """
-        Loại bỏ khoảng trắng thừa ở đầu và cuối tên hiển thị.
+        Loại bỏ khoảng trắng ở đầu và cuối tên hiển thị.
 
-        Việc kiểm tra độ dài được Pydantic thực hiện
-        sau khi tên đã được chuẩn hóa.
+        Pydantic sẽ kiểm tra độ dài sau khi chuẩn hóa.
         """
 
         if isinstance(value, str):
@@ -46,14 +48,44 @@ class AccountRegisterRequest(BaseModel):
 
 class AccountResponse(BaseModel):
     """
-    Quy định thông tin tài khoản được phép trả về cho Client.
+    Quy định dữ liệu tài khoản trả về cho Client.
 
-    Không trả về mật khẩu gốc hoặc mã băm mật khẩu.
+    Không chứa mật khẩu hoặc mã băm mật khẩu.
     """
 
-    # Cho phép đọc dữ liệu trực tiếp từ SQLAlchemy object.
+    # Cho phép đọc thông tin từ SQLAlchemy object.
     model_config = ConfigDict(from_attributes=True)
 
     account_id: int
     email: EmailStr
     display_name: str
+
+
+class AccountLoginRequest(BaseModel):
+    """
+    Kiểm tra thông tin đăng nhập của người chăm sóc.
+
+    Người dùng chỉ cần cung cấp email và mật khẩu.
+    """
+
+    email: EmailStr
+
+    password: str = Field(
+        min_length=1,
+        max_length=128,
+    )
+
+
+class AccessTokenResponse(BaseModel):
+    """
+    Quy định dữ liệu trả về sau khi đăng nhập thành công.
+
+    Access Token được sử dụng để xác thực các request
+    tiếp theo gửi đến Backend.
+    """
+
+    access_token: str
+
+    token_type: Literal["bearer"] = "bearer"
+
+    expires_in: int
