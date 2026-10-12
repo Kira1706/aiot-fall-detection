@@ -1,6 +1,10 @@
+
+"""Khởi tạo ứng dụng FastAPI cho hệ thống phát hiện té ngã."""
+
 from fastapi import FastAPI
 
 from auth_routes import router as auth_router
+from device_routes import router as device_router
 
 
 # Khởi tạo ứng dụng Backend.
@@ -10,15 +14,17 @@ app = FastAPI(
 )
 
 
-# Đăng ký nhóm API xác thực tài khoản.
+# Đăng ký các API xác thực tài khoản.
 app.include_router(auth_router)
+
+
+# Đăng ký các API đọc thông tin thiết bị.
+app.include_router(device_router)
 
 
 @app.get("/")
 def root():
-    """
-    Trả về thông tin cơ bản của Backend.
-    """
+    """Trả thông tin cơ bản của ứng dụng."""
 
     return {
         "message": "AIoT Fall Detection Backend"
@@ -27,11 +33,7 @@ def root():
 
 @app.get("/health")
 def health():
-    """
-    Kiểm tra Backend có đang hoạt động hay không.
-
-    Endpoint này chưa kiểm tra kết nối Database.
-    """
+    """Kiểm tra tiến trình Backend có đang hoạt động."""
 
     return {
         "status": "ok"
