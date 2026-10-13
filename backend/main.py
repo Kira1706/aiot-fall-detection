@@ -6,6 +6,11 @@ from fastapi import FastAPI
 from auth_routes import router as auth_router
 from device_routes import router as device_router
 
+from device_status_routes import (
+    edge_router,
+    status_router,
+)
+
 
 # Khởi tạo ứng dụng Backend.
 app = FastAPI(
@@ -14,17 +19,22 @@ app = FastAPI(
 )
 
 
-# Đăng ký các API xác thực tài khoản.
+# Các API xác thực và quản lý tài khoản.
 app.include_router(auth_router)
 
-
-# Đăng ký các API đọc thông tin thiết bị.
+# Các API quản lý liên kết và đọc thông tin Device.
 app.include_router(device_router)
+
+# API nhận heartbeat từ ESP32.
+app.include_router(edge_router)
+
+# API xem trạng thái kết nối dành cho caregiver.
+app.include_router(status_router)
 
 
 @app.get("/")
 def root():
-    """Trả thông tin cơ bản của ứng dụng."""
+    """Trả thông tin cơ bản của Backend."""
 
     return {
         "message": "AIoT Fall Detection Backend"
