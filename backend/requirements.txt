@@ -5,3 +5,4 @@ pwdlib[argon2]
 pydantic[email]
 PyJWT
 python-dotenv
+psycopg[binary]
