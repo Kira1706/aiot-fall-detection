@@ -1,347 +1,136 @@
-
-"""Các API đọc và quản lý liên kết thiết bị của caregiver."""
+"""Quản lý Device và liên kết caregiver; trạng thái đọc từ Database."""
 
 import os
-
 from pathlib import Path
 
 from dotenv import load_dotenv
-
-from fastapi import (
-    APIRouter,
-    Depends,
-    HTTPException,
-    status,
-)
-
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from auth_dependencies import get_current_account
 from database import get_db
-
-from device_heartbeat_store import (
-    HeartbeatStore,
-    get_heartbeat_store,
-)
-
+from device_heartbeat_service import get_device_liveness
 from device_permissions import get_authorized_device
-
-from device_schemas import (
-    DeviceLinkRequest,
-    DeviceNicknameRequest,
-    FollowedDeviceResponse,
-)
-
+from device_schemas import DeviceLinkRequest, DeviceNicknameRequest, FollowedDeviceResponse
 from models import Account, AccountDevice, Device
 
-
-# Đọc cấu hình phát triển của Backend.
-BASE_DIR = Path(__file__).resolve().parent
-
-load_dotenv(
-    dotenv_path=BASE_DIR / ".env"
-)
+load_dotenv(Path(__file__).resolve().parent / ".env")
+router = APIRouter(prefix="/devices", tags=["Devices"])
 
 
-router = APIRouter(
-    prefix="/devices",
-    tags=["Devices"],
-)
+def require_demo_linking() -> None:
+    """Mặc định khóa liên kết Device chỉ dựa vào ID vì chưa xác minh chủ sở hữu."""
 
-
-def require_demo_linking():
-    """
-    Chỉ cho phép liên kết bằng Device ID ở môi trường demo.
-
-    Chế độ này chưa chứng minh quyền sở hữu thiết bị.
-    """
-
-    demo_mode = os.getenv(
-        "DEVICE_LINK_DEMO_MODE",
-        "false",
-    ).lower()
-
-    if demo_mode != "true":
+    if os.getenv("DEVICE_LINK_DEMO_MODE", "false").lower() != "true":
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=(
-                "Chức năng liên kết thử nghiệm "
-                "chưa được bật."
-            ),
+            detail="Chức năng liên kết thử nghiệm chưa được bật.",
         )
 
 
 def build_device_response(
-    device: Device,
-    account_device: AccountDevice,
-    store: HeartbeatStore,
+    device: Device, link: AccountDevice, db: Session
 ) -> FollowedDeviceResponse:
-    """
-    Tạo dữ liệu Device dành riêng cho caregiver.
+    """Trả tên riêng caregiver và trạng thái heartbeat được lưu trong DB."""
 
-    Trạng thái online/offline lấy từ bộ nhớ heartbeat.
-    Tên hiển thị lấy từ liên kết AccountDevice.
-    """
-
-    # Không sử dụng device.status để xác định kết nối thật.
-    liveness = store.snapshot(
-        device.device_id
-    )
-
+    liveness, _ = get_device_liveness(db, device.device_id)
     return FollowedDeviceResponse(
         device_id=device.device_id,
-        display_name=account_device.display_name,
-        status=liveness.status,
+        display_name=link.display_name,
+        status=liveness,
         model_version=device.model_version,
     )
 
 
-# =========================================================
-# 1. LẤY DANH SÁCH THIẾT BỊ ĐANG THEO DÕI
-# =========================================================
-
-@router.get(
-    "",
-    response_model=list[FollowedDeviceResponse],
-    status_code=status.HTTP_200_OK,
-)
+@router.get("", response_model=list[FollowedDeviceResponse])
 def get_my_devices(
     current_account: Account = Depends(get_current_account),
     db: Session = Depends(get_db),
-    store: HeartbeatStore = Depends(get_heartbeat_store),
 ):
-    """
-    Lấy danh sách Device mà caregiver được phép theo dõi.
+    """Chỉ lấy danh sách Device của Account đã được xác thực."""
 
-    Trạng thái được tính từ heartbeat của từng thiết bị.
-    """
-
-    statement = (
-        select(
-            Device,
-            AccountDevice.display_name,
-        )
-        .join(
-            AccountDevice,
-            AccountDevice.device_id == Device.device_id,
-        )
-        .where(
-            AccountDevice.account_id
-            == current_account.account_id
-        )
-        .order_by(
-            Device.device_id
-        )
-    )
-
-    rows = db.execute(statement).all()
-
-    result = []
-
-    for device, display_name in rows:
-
-        # Tính trạng thái từ heartbeat mới nhất.
-        liveness = store.snapshot(
-            device.device_id
-        )
-
-        result.append(
-            FollowedDeviceResponse(
-                device_id=device.device_id,
-                display_name=display_name,
-                status=liveness.status,
-                model_version=device.model_version,
-            )
-        )
-
-    return result
+    rows = db.execute(
+        select(Device, AccountDevice)
+        .join(AccountDevice, AccountDevice.device_id == Device.device_id)
+        .where(AccountDevice.account_id == current_account.account_id)
+        .order_by(Device.device_id)
+    ).all()
+    return [build_device_response(device, link, db) for device, link in rows]
 
 
-# =========================================================
-# 2. XEM CHI TIẾT MỘT THIẾT BỊ
-# =========================================================
-
-@router.get(
-    "/{device_id}",
-    response_model=FollowedDeviceResponse,
-    status_code=status.HTTP_200_OK,
-)
+@router.get("/{device_id}", response_model=FollowedDeviceResponse)
 def get_device_detail(
-    authorized_data: tuple[Device, AccountDevice] = Depends(
-        get_authorized_device
-    ),
-    store: HeartbeatStore = Depends(get_heartbeat_store),
+    authorized_data: tuple[Device, AccountDevice] = Depends(get_authorized_device),
+    db: Session = Depends(get_db),
 ):
-    """
-    Lấy chi tiết Device sau khi xác minh quyền caregiver.
+    """Trả Device sau khi đã kiểm tra AccountDevice."""
 
-    Trạng thái kết nối được tính từ heartbeat.
-    """
+    device, link = authorized_data
+    return build_device_response(device, link, db)
 
-    device, account_device = authorized_data
-
-    return build_device_response(
-        device,
-        account_device,
-        store,
-    )
-
-
-# =========================================================
-# 3. LIÊN KẾT THIẾT BỊ TRONG CHẾ ĐỘ DEMO
-# =========================================================
 
 @router.post(
-    "/link",
-    response_model=FollowedDeviceResponse,
+    "/link", response_model=FollowedDeviceResponse,
     status_code=status.HTTP_201_CREATED,
 )
 def link_device(
     payload: DeviceLinkRequest,
     current_account: Account = Depends(get_current_account),
     db: Session = Depends(get_db),
-    store: HeartbeatStore = Depends(get_heartbeat_store),
 ):
-    """
-    Tạo liên kết caregiver với Device đã đăng ký.
+    """Liên kết thử nghiệm, chỉ mở tại môi trường demo an toàn."""
 
-    Chỉ cho phép khi chế độ liên kết demo được bật.
-    """
-
-    # Không mở liên kết chỉ bằng ID nếu chưa bật demo.
     require_demo_linking()
-
-    device = db.get(
-        Device,
-        payload.device_id,
-    )
-
+    device = db.get(Device, payload.device_id)
     if device is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Không tìm thấy thiết bị.",
-        )
+        raise HTTPException(status_code=404, detail="Không tìm thấy thiết bị.")
 
-    # Khóa chính kép xác định một liên kết duy nhất.
-    link_key = (
-        current_account.account_id,
-        device.device_id,
-    )
+    key = (current_account.account_id, device.device_id)
+    if db.get(AccountDevice, key) is not None:
+        raise HTTPException(status_code=409, detail="Bạn đã liên kết thiết bị này.")
 
-    existing_link = db.get(
-        AccountDevice,
-        link_key,
-    )
-
-    if existing_link is not None:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Bạn đã liên kết thiết bị này.",
-        )
-
-    account_device = AccountDevice(
+    link = AccountDevice(
         account_id=current_account.account_id,
         device_id=device.device_id,
         display_name=payload.display_name,
     )
-
-    db.add(account_device)
-
+    db.add(link)
     try:
         db.commit()
-
     except IntegrityError:
-        # Phục hồi Session trước khi kiểm tra lỗi trùng.
         db.rollback()
-
-        duplicate_link = db.get(
-            AccountDevice,
-            link_key,
-        )
-
-        if duplicate_link is not None:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Bạn đã liên kết thiết bị này.",
-            )
-
+        if db.get(AccountDevice, key) is not None:
+            raise HTTPException(status_code=409, detail="Bạn đã liên kết thiết bị này.")
         raise
-
-    db.refresh(account_device)
-
-    return build_device_response(
-        device,
-        account_device,
-        store,
-    )
+    db.refresh(link)
+    return build_device_response(device, link, db)
 
 
-# =========================================================
-# 4. ĐỔI HOẶC XÓA TÊN RIÊNG
-# =========================================================
-
-@router.patch(
-    "/{device_id}/nickname",
-    response_model=FollowedDeviceResponse,
-    status_code=status.HTTP_200_OK,
-)
+@router.patch("/{device_id}/nickname", response_model=FollowedDeviceResponse)
 def update_device_nickname(
     payload: DeviceNicknameRequest,
-    authorized_data: tuple[Device, AccountDevice] = Depends(
-        get_authorized_device
-    ),
+    authorized_data: tuple[Device, AccountDevice] = Depends(get_authorized_device),
     db: Session = Depends(get_db),
-    store: HeartbeatStore = Depends(get_heartbeat_store),
 ):
-    """
-    Cập nhật tên riêng của Device cho caregiver hiện tại.
+    """Chỉ thay tên liên kết của caregiver hiện tại."""
 
-    Không thay đổi Device hoặc liên kết của caregiver khác.
-    """
-
-    device, account_device = authorized_data
-
-    # None có nghĩa là xóa tên riêng nhưng vẫn giữ liên kết.
-    account_device.display_name = payload.display_name
-
+    device, link = authorized_data
+    link.display_name = payload.display_name
     db.commit()
-    db.refresh(account_device)
-
-    return build_device_response(
-        device,
-        account_device,
-        store,
-    )
+    db.refresh(link)
+    return build_device_response(device, link, db)
 
 
-# =========================================================
-# 5. HỦY LIÊN KẾT THIẾT BỊ
-# =========================================================
-
-@router.delete(
-    "/{device_id}/link",
-    status_code=status.HTTP_204_NO_CONTENT,
-)
+@router.delete("/{device_id}/link", status_code=status.HTTP_204_NO_CONTENT)
 def unlink_device(
-    authorized_data: tuple[Device, AccountDevice] = Depends(
-        get_authorized_device
-    ),
+    authorized_data: tuple[Device, AccountDevice] = Depends(get_authorized_device),
     db: Session = Depends(get_db),
 ):
-    """
-    Hủy liên kết của caregiver với một Device.
+    """Chỉ xóa liên kết, không xóa Device hoặc FallEvent."""
 
-    Không xóa Device hoặc dữ liệu FallEvent.
-    """
-
-    device, account_device = authorized_data
-
-    # Chỉ xóa liên kết của caregiver đang đăng nhập.
-    db.delete(account_device)
-
+    _, link = authorized_data
+    db.delete(link)
     db.commit()
-
-    # HTTP 204 không trả nội dung response.
     return None

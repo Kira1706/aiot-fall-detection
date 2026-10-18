@@ -108,7 +108,6 @@ def check_schema():
             column["name"]
             for column in inspector.get_columns(name)
         }
-
         assert expected_columns == actual_columns, (
             f"Cột trong {name} không khớp: "
             f"{sorted(actual_columns)}"

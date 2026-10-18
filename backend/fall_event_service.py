@@ -1,33 +1,34 @@
-"""Xử lý lưu trữ Fall Event và tìm tài khoản nhận cảnh báo."""
+
+"""Ghi Fall Event theo UUID và xử lý sự kiện gửi lại."""
 
 from datetime import datetime, timezone
-from threading import Lock
 
 from sqlalchemy import select
+
+from sqlalchemy.dialects.postgresql import (
+    insert as pg_insert,
+)
+
+from sqlalchemy.dialects.sqlite import (
+    insert as sqlite_insert,
+)
+
 from sqlalchemy.orm import Session
 
 from fall_event_schemas import (
     FallEventCreate,
     FallEventResponse,
 )
+
 from models import AccountDevice, FallEvent
 
 
-# Tuần tự hóa các thao tác kiểm tra và ghi Fall Event
-# trong phạm vi một tiến trình Backend.
-# Khóa này không bảo vệ được nhiều worker hoặc nhiều Server.
-fall_event_write_lock = Lock()
+class EventIdConflictError(Exception):
+    """UUID đã tồn tại nhưng nội dung sự kiện bị thay đổi."""
 
 
-def normalize_database_datetime(
-    value: datetime,
-) -> datetime:
-    """
-    Chuẩn hóa thời gian lấy từ Database về UTC.
-
-    SQLite có thể trả datetime không kèm múi giờ.
-    Với dữ liệu do API này lưu, thời gian đó được hiểu là UTC.
-    """
+def utc_datetime(value: datetime) -> datetime:
+    """Chuẩn hóa thời gian lấy từ Database về UTC."""
 
     if value.tzinfo is None:
         return value.replace(tzinfo=timezone.utc)
@@ -41,118 +42,124 @@ def save_fall_event(
     payload: FallEventCreate,
 ) -> tuple[FallEvent, bool]:
     """
-    Lưu Fall Event hoặc tìm bản ghi có nội dung giống hệt.
+    Lưu Fall Event bằng khóa duy nhất của Database.
 
-    Một sự kiện thử nghiệm được nhận diện bằng:
-    - Device ID.
-    - Thời điểm sự kiện.
-    - Loại sự kiện.
-    - Phiên bản model.
-    - Độ tin cậy.
+    Nếu cùng UUID và cùng nội dung:
+        Trả sự kiện cũ, đánh dấu duplicate.
 
-    Trả về:
-    - FallEvent được lưu hoặc đã tồn tại.
-    - True nếu nhận diện là sự kiện gửi lại.
-
-    Cơ chế này chỉ bảo đảm tuần tự hóa trong một tiến trình.
+    Nếu cùng UUID nhưng đổi nội dung:
+        Phát sinh lỗi để API trả HTTP 409.
     """
 
-    # Đảm bảo dữ liệu đã được chuẩn hóa về UTC.
-    event_time = payload.event_time.astimezone(
-        timezone.utc
-    )
+    values = {
+        "device_id": device_id,
+        "edge_event_id": str(payload.edge_event_id),
+        "event_time": payload.event_time,
+        "event_type": payload.event_type,
+        "model_version": payload.model_version,
+        "confidence": payload.confidence,
+    }
 
-    with fall_event_write_lock:
+    # Chọn cú pháp INSERT tương ứng Database.
+    dialect = db.get_bind().dialect.name
 
-        # Kiểm tra bản ghi có dữ liệu giống hệt.
-        statement = (
-            select(FallEvent)
-            .where(
-                FallEvent.device_id == device_id,
-                FallEvent.event_time == event_time,
-                FallEvent.event_type == payload.event_type,
-                FallEvent.model_version == payload.model_version,
-                FallEvent.confidence == payload.confidence,
-            )
-            .order_by(
-                FallEvent.event_id
-            )
-            .limit(1)
+    if dialect == "postgresql":
+        statement = pg_insert(FallEvent).values(**values)
+
+    elif dialect == "sqlite":
+        statement = sqlite_insert(FallEvent).values(**values)
+
+    else:
+        raise RuntimeError(
+            "Backend chỉ hỗ trợ PostgreSQL hoặc SQLite."
         )
 
-        existing_event = db.scalar(statement)
+    # Database kiểm tra UUID trùng theo cặp Device + Event.
+    statement = statement.on_conflict_do_nothing(
+        index_elements=[
+            "device_id",
+            "edge_event_id",
+        ]
+    ).returning(FallEvent.event_id)
 
-        if existing_event is not None:
-            return existing_event, True
+    try:
+        new_id = db.scalar(statement)
 
-        # Tạo Fall Event mới theo ORM Model đã có.
-        fall_event = FallEvent(
-            device_id=device_id,
-            event_time=event_time,
-            event_type=payload.event_type,
-            model_version=payload.model_version,
-            confidence=payload.confidence,
-        )
-
-        db.add(fall_event)
-
-        try:
-            # Ghi sự kiện vào Database.
+        if new_id is not None:
+            # Đây là Fall Event mới.
             db.commit()
 
-        except Exception:
-            # Khôi phục Session nếu thao tác lưu thất bại.
-            db.rollback()
-            raise
+            event = db.get(FallEvent, new_id)
 
-        # Lấy event_id do Database tự tạo.
-        db.refresh(fall_event)
+            return event, False
 
-        return fall_event, False
+        # Không chèn được vì khóa sự kiện đã tồn tại.
+        event = db.scalar(
+            select(FallEvent).where(
+                FallEvent.device_id == device_id,
+                FallEvent.edge_event_id
+                == values["edge_event_id"],
+            )
+        )
+
+        if event is None:
+            raise RuntimeError(
+                "Không tìm thấy bản ghi sau xung đột UUID."
+            )
+
+        # Xác nhận payload gửi lại giống sự kiện gốc.
+        same_data = (
+            utc_datetime(event.event_time)
+            == payload.event_time
+            and event.event_type == payload.event_type
+            and event.model_version == payload.model_version
+            and event.confidence == payload.confidence
+        )
+
+        if not same_data:
+            raise EventIdConflictError(
+                "Mã sự kiện đã tồn tại "
+                "nhưng nội dung không trùng khớp."
+            )
+
+        return event, True
+
+    except Exception:
+        # Khôi phục giao dịch khi có lỗi.
+        db.rollback()
+        raise
 
 
 def resolve_alert_recipient_account_ids(
     db: Session,
     device_id: str,
 ) -> list[int]:
-    """
-    Tìm tất cả Account đang theo dõi Device.
-
-    Một Device có thể có nhiều caregiver.
-    Chỉ trả Account ID nội bộ, không trả dữ liệu này cho ESP32.
-    """
-
-    statement = (
-        select(AccountDevice.account_id)
-        .where(
-            AccountDevice.device_id == device_id
-        )
-        .order_by(
-            AccountDevice.account_id
-        )
-    )
+    """Lấy tất cả caregiver đang theo dõi thiết bị."""
 
     return list(
-        db.scalars(statement).all()
+        db.scalars(
+            select(AccountDevice.account_id)
+            .where(
+                AccountDevice.device_id == device_id
+            )
+            .order_by(
+                AccountDevice.account_id
+            )
+        ).all()
     )
 
 
 def build_fall_event_response(
-    fall_event: FallEvent,
+    event: FallEvent,
 ) -> FallEventResponse:
-    """
-    Tạo dữ liệu Fall Event trả về cho caregiver.
-
-    Thời gian được biểu diễn theo UTC.
-    """
+    """Chuyển FallEvent thành dữ liệu trả về cho caregiver."""
 
     return FallEventResponse(
-        event_id=fall_event.event_id,
-        device_id=fall_event.device_id,
-        event_time=normalize_database_datetime(
-            fall_event.event_time
-        ),
-        event_type=fall_event.event_type,
-        model_version=fall_event.model_version,
-        confidence=fall_event.confidence,
+        event_id=event.event_id,
+        device_id=event.device_id,
+        edge_event_id=event.edge_event_id,
+        event_time=utc_datetime(event.event_time),
+        event_type=event.event_type,
+        model_version=event.model_version,
+        confidence=event.confidence,
     )
