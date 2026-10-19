@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>FallGuard | AIoT Dashboard</title>
+  <link rel="stylesheet" href="/dashboard-assets/styles.css">
+  <script src="/dashboard-assets/app.js" defer></script>
+</head>
+<body>
+  <div id="login-view" class="auth-layout">
+    <section class="intro-panel" aria-label="Giới thiệu ứng dụng">
+      <div class="brand brand-light"><span class="brand-icon">✦</span><span>FallGuard<span class="brand-dot">.</span></span></div>
+      <div class="intro-content">
+        <span class="eyebrow eyebrow-light">AIoT FALL DETECTION SYSTEM</span>
+        <h1>Chăm sóc an tâm.<br>Thông tin rõ ràng.</h1>
+        <p>Quản lý thiết bị, theo dõi kết nối và xem lại những sự kiện ngã từ một giao diện duy nhất.</p>
+        <div class="intro-metrics"><span>01 <small>Dashboard</small></span><span>24/7 <small>Tầm nhìn hệ thống*</small></span></div>
+      </div>
+      <p class="intro-note">* Giao diện Milestone 7 sử dụng làm mới thủ công; chưa hỗ trợ cảnh báo realtime.</p>
+    </section>
+    <main class="login-panel">
+      <div class="login-card">
+        <span class="eyebrow">CỔNG NGƯỜI CHĂM SÓC</span>
+        <h2>Chào mừng trở lại</h2>
+        <p class="muted">Đăng nhập bằng tài khoản đã đăng ký trên Backend.</p>
+        <form id="login-form" autocomplete="on">
+          <label for="email">Địa chỉ email</label>
+          <input id="email" type="email" name="email" placeholder="caregiver@example.com" autocomplete="username" required>
+          <label for="password">Mật khẩu</label>
+          <input id="password" type="password" name="password" placeholder="Nhập mật khẩu" autocomplete="current-password" required>
+          <p id="login-error" class="error-text" role="alert" hidden></p>
+          <button id="login-button" class="button primary full-width" type="submit">Đăng nhập <span aria-hidden="true">→</span></button>
+        </form>
+        <p class="login-hint">Phiên đăng nhập được giữ trong bộ nhớ trình duyệt. Tải lại trang sẽ cần đăng nhập lại.</p>
+      </div>
+    </main>
+  </div>
+
+  <div id="dashboard-view" class="app-layout" hidden>
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-icon">✦</span><span>FallGuard<span class="brand-dot">.</span></span></div>
+      <p class="sidebar-heading">KHÔNG GIAN QUẢN LÝ</p>
+      <nav aria-label="Điều hướng chính">
+        <a class="nav-link active" href="#overview">◫ <span>Tổng quan</span></a>
+        <a class="nav-link" href="#devices-section">▣ <span>Thiết bị</span></a>
+        <a class="nav-link" href="#events-section">◷ <span>Lịch sử ngã</span></a>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="help-note">Giao diện cập nhật theo yêu cầu. Cảnh báo thời gian thực sẽ triển khai ở Milestone 8.</div>
+        <button id="logout-button" class="button quiet full-width" type="button">Đăng xuất <span aria-hidden="true">↗</span></button>
+      </div>
+    </aside>
+
+    <main class="content" id="overview">
+      <header class="topbar">
+        <div><div class="eyebrow">BẢNG ĐIỀU KHIỂN / TỔNG QUAN</div><h1>Xin chào, <span id="account-name">Caregiver</span></h1><p class="muted">Theo dõi tình trạng thiết bị và những sự kiện gần đây.</p></div>
+        <div class="top-actions">
+          <span class="account-pill" id="account-email"></span>
+          <button id="refresh-button" class="button secondary" type="button">↻ Làm mới</button>
+        </div>
+      </header>
+      <p id="dashboard-message" class="notice" role="status" aria-live="polite" hidden></p>
+      <p class="last-update">Dữ liệu cập nhật lần cuối: <time id="updated-at">Chưa tải</time></p>
+
+      <section class="metrics" aria-label="Thống kê tổng quan">
+        <article class="metric"><div class="metric-top"><span>Thiết bị theo dõi</span><span class="metric-symbol">▣</span></div><strong id="total-devices">—</strong><small>Trong tài khoản của bạn</small></article>
+        <article class="metric"><div class="metric-top"><span>Đang online</span><span class="metric-symbol online-symbol">●</span></div><strong id="online-devices">—</strong><small>Trong lần làm mới gần nhất</small></article>
+        <article class="metric"><div class="metric-top"><span>Đang offline</span><span class="metric-symbol offline-symbol">●</span></div><strong id="offline-devices">—</strong><small>Quá thời gian heartbeat</small></article>
+        <article class="metric"><div class="metric-top"><span>Sự kiện hiển thị</span><span class="metric-symbol">◷</span></div><strong id="visible-events">—</strong><small>Chỉ tính trang đang xem</small></article>
+      </section>
+
+      <section class="device-section" id="devices-section" aria-labelledby="devices-title">
+        <div class="section-heading"><div><span class="eyebrow">THIẾT BỊ</span><h2 id="devices-title">Danh sách đang theo dõi</h2></div><button class="button text-button" id="view-all-button" type="button">Xem tất cả sự kiện →</button></div>
+        <div class="device-layout">
+          <div class="panel device-list-panel"><div class="panel-kicker">CHỌN THIẾT BỊ</div><div id="device-list" class="device-list" aria-live="polite"><p class="empty-state">Đang tải thiết bị...</p></div></div>
+          <div class="panel detail-panel" aria-live="polite">
+            <div class="panel-kicker">THÔNG TIN THIẾT BỊ</div>
+            <div id="device-detail-empty" class="empty-detail"><span class="empty-symbol">▣</span><h3>Chọn một thiết bị</h3><p class="muted">Xem trạng thái kết nối và thời điểm heartbeat cuối.</p></div>
+            <div id="device-detail" hidden><div class="detail-heading"><div><p class="eyebrow">THIẾT BỊ ĐANG CHỌN</p><h3 id="detail-name"></h3><p class="muted" id="detail-id"></p></div><span id="detail-status" class="status-pill">—</span></div><dl class="detail-grid"><div><dt>Lần heartbeat cuối</dt><dd id="detail-seen">—</dd></div><div><dt>Phiên bản AI model</dt><dd id="detail-model">—</dd></div><div><dt>Ngưỡng timeout</dt><dd id="detail-timeout">—</dd></div></dl></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="events-section" id="events-section" aria-labelledby="events-title">
+        <div class="section-heading"><div><span class="eyebrow">LỊCH SỬ</span><h2 id="events-title">Sự kiện ngã</h2><p id="event-scope" class="muted">Tất cả thiết bị được theo dõi</p></div><div class="pagination"><button id="previous-page" class="button secondary small" type="button" disabled>← Trước</button><span id="page-label">Trang 1</span><button id="next-page" class="button secondary small" type="button" disabled>Tiếp →</button></div></div>
+        <div class="panel event-panel"><div class="table-scroll"><table><thead><tr><th>THỜI GIAN</th><th>THIẾT BỊ</th><th>LOẠI SỰ KIỆN</th><th>ĐỘ TIN CẬY</th><th>MODEL</th></tr></thead><tbody id="event-list"><tr><td colspan="5" class="empty-table">Đang tải lịch sử...</td></tr></tbody></table></div><p class="table-footer">Hiển thị tối đa 10 sự kiện/trang • Thời gian theo múi giờ trình duyệt</p></div>
+      </section>
+      <footer class="footer">FallGuard · AIoT Fall Detection · Milestone 7 — Dashboard Web</footer>
+    </main>
+  </div>
+</body>
+</html>
