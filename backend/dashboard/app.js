@@ -12,6 +12,15 @@ let selectedDeviceId = null;
 let currentPage = 0;
 let requestVersion = 0;
 
+// Lưu thông báo chưa xem theo ID để không hiện trùng khi REST và WebSocket cùng gửi.
+const pendingAlerts = new Map();
+let alertSocket = null;
+let reconnectTimer = null;
+let realtimeGeneration = 0;
+let reconnectAttempt = 0;
+let websocketPingTimer = null;
+
+
 // Đọc lỗi trả về từ FastAPI mà không hiển thị thông tin nội bộ.
 function getErrorMessage(data, status) {
   if (typeof data?.detail === "string") return data.detail;
@@ -22,6 +31,7 @@ function getErrorMessage(data, status) {
 }
 
 function clearSession(message = "") {
+  stopRealtime();
   // Tăng phiên bản để các request cũ không thể cập nhật giao diện mới.
   requestVersion += 1;
   accessToken = null;
@@ -307,6 +317,8 @@ async function login(event) {
     selectedDeviceId = null;
     currentPage = 0;
     await refreshDashboard();
+    await loadUnreadAlerts();
+    startRealtime();
   } catch (error) {
     if ($("login-view").hidden === false) {
       $("login-error").textContent = error.message;
@@ -317,6 +329,162 @@ async function login(event) {
   } finally {
     $("login-button").disabled = false;
   }
+}
+
+// ------------------------------------------------------------
+// Cảnh báo realtime: REST dùng để nhận lại, WS dùng để báo nhanh.
+// ------------------------------------------------------------
+function setRealtimeStatus(message, connected = false) {
+  $("realtime-status").textContent = message;
+  $("realtime-status").classList.toggle("connected", connected);
+}
+
+function renderAlertList() {
+  const container = $("alert-list");
+  container.replaceChildren();
+  $("alert-unread-count").textContent = String(pendingAlerts.size);
+
+  const alerts = Array.from(pendingAlerts.values())
+    .sort((a, b) => b.notification_id - a.notification_id)
+    .slice(0, 20);
+  if (!alerts.length) {
+    const empty = document.createElement("p");
+    empty.className = "muted";
+    empty.textContent = "Không có thông báo ngã nào chưa xem.";
+    container.appendChild(empty);
+    return;
+  }
+
+  for (const alert of alerts) {
+    const item = document.createElement("article");
+    item.className = "alert-item";
+    const content = document.createElement("div");
+    const title = document.createElement("strong");
+    title.textContent = `CẢNH BÁO NGÃ — ${alert.device_name || alert.device_id}`;
+    const details = document.createElement("p");
+    details.textContent = `${formatDate(alert.event_time)} · ${alert.device_id} · Tin cậy: ${
+      alert.confidence == null ? "không có" : Math.round(alert.confidence * 100) + "%"
+    }`;
+    content.append(title, details);
+
+    const button = document.createElement("button");
+    button.className = "button secondary small";
+    button.type = "button";
+    button.textContent = "Đã xem";
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      try {
+        await apiRequest(`/alerts/${alert.notification_id}/read`, { method: "POST" });
+        pendingAlerts.delete(alert.notification_id);
+        renderAlertList();
+      } catch (error) {
+        button.disabled = false;
+        showMessage(error.message, true);
+      }
+    });
+    item.append(content, button);
+    container.appendChild(item);
+  }
+}
+
+function receiveAlert(data) {
+  if (!data || !Number.isInteger(data.notification_id) || data.read_at) return;
+  if (pendingAlerts.has(data.notification_id)) return;
+  pendingAlerts.set(data.notification_id, data);
+  renderAlertList();
+  // Lịch sử ngã vẫn lấy từ API có phân quyền như Milestone 7.
+  refreshDashboard();
+}
+
+async function loadUnreadAlerts() {
+  const version = realtimeGeneration;
+  try {
+    // API trả thông báo chưa xem; WS tiếp tục đưa về các bản ghi kế tiếp.
+    const data = await apiRequest("/alerts?unread_only=true&limit=100");
+    if (version !== realtimeGeneration || !Array.isArray(data)) return;
+    for (const alert of data) {
+      if (!pendingAlerts.has(alert.notification_id)) {
+        pendingAlerts.set(alert.notification_id, alert);
+      }
+    }
+    renderAlertList();
+  } catch (error) {
+    if (accessToken) showMessage(`Không tải được cảnh báo: ${error.message}`, true);
+  }
+}
+
+function stopRealtime() {
+  realtimeGeneration += 1;
+  if (reconnectTimer !== null) clearTimeout(reconnectTimer);
+  reconnectTimer = null;
+  if (websocketPingTimer !== null) clearInterval(websocketPingTimer);
+  websocketPingTimer = null;
+  if (alertSocket) {
+    const socket = alertSocket;
+    alertSocket = null;
+    socket.onclose = null;
+    socket.close();
+  }
+  pendingAlerts.clear();
+  renderAlertList();
+  setRealtimeStatus("Chưa kết nối");
+}
+
+function startRealtime() {
+  if (!accessToken || Date.now() >= expiresAt) return;
+  const generation = realtimeGeneration;
+  const scheme = window.location.protocol === "https:" ? "wss" : "ws";
+  const socket = new WebSocket(`${scheme}://${window.location.host}/ws/alerts`);
+  alertSocket = socket;
+  setRealtimeStatus("Đang kết nối...");
+
+  socket.onopen = () => {
+    if (generation !== realtimeGeneration) return;
+    // Trình duyệt không hỗ trợ tự đặt Authorization header cho WebSocket.
+    // Vì vậy JWT được gửi trong thông điệp đầu, KHÔNG gắn trên URL.
+    socket.send(JSON.stringify({ type: "auth", token: accessToken }));
+  };
+
+  socket.onmessage = (event) => {
+    if (generation !== realtimeGeneration) return;
+    let message;
+    try { message = JSON.parse(event.data); } catch (_error) { return; }
+    if (message.type === "authenticated") {
+      reconnectAttempt = 0;
+      setRealtimeStatus("Đang kết nối trực tiếp", true);
+      if (websocketPingTimer !== null) clearInterval(websocketPingTimer);
+      websocketPingTimer = setInterval(() => {
+        if (socket.readyState === WebSocket.OPEN) socket.send("ping");
+      }, 20000);
+    } else if (message.type === "fall_alert") {
+      receiveAlert(message.data);
+    }
+  };
+
+  socket.onclose = (event) => {
+    if (generation !== realtimeGeneration || !accessToken) return;
+    alertSocket = null;
+    if (websocketPingTimer !== null) clearInterval(websocketPingTimer);
+    websocketPingTimer = null;
+    if (event.code === 4401 || Date.now() >= expiresAt) {
+      clearSession("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+      return;
+    }
+    setRealtimeStatus("Mất kết nối — đang thử lại");
+    const delay = Math.min(15000, 1000 * 2 ** Math.min(reconnectAttempt, 4));
+    reconnectAttempt += 1;
+    reconnectTimer = setTimeout(async () => {
+      reconnectTimer = null;
+      if (generation !== realtimeGeneration || !accessToken) return;
+      await loadUnreadAlerts();
+      startRealtime();
+    }, delay);
+  };
+
+  socket.onerror = () => {
+    // Chờ onclose để tự kết nối lại, không in JWT vào log.
+    setRealtimeStatus("Kết nối gặp lỗi");
+  };
 }
 
 // Liên kết các thao tác giao diện với API đã được bảo vệ.

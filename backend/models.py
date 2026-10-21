@@ -1,8 +1,8 @@
-"""Định nghĩa sáu bảng dữ liệu của hệ thống AIoT ở schema v2."""
+"""Định nghĩa các bảng AIoT, bổ sung thông báo bền vững ở schema v3."""
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, Float, ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy import DateTime, Float, ForeignKey, Index, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from database import Base
@@ -85,4 +85,30 @@ class DeviceHeartbeatState(Base):
     )
     last_seen_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
+    )
+
+
+class AlertNotification(Base):
+    """Thông báo té ngã dành riêng cho một caregiver tại thời điểm ghi sự kiện."""
+
+    __tablename__ = "alert_notifications"
+    __table_args__ = (
+        UniqueConstraint(
+            "account_id", "fall_event_id", name="uq_alert_notifications_account_event"
+        ),
+        Index("ix_alert_notifications_account_notification", "account_id", "notification_id"),
+    )
+
+    notification_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    account_id: Mapped[int] = mapped_column(
+        ForeignKey("accounts.account_id"), nullable=False
+    )
+    fall_event_id: Mapped[int] = mapped_column(
+        ForeignKey("fall_events.event_id"), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    read_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
     )

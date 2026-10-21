@@ -18,7 +18,7 @@
         <p>Quản lý thiết bị, theo dõi kết nối và xem lại những sự kiện ngã từ một giao diện duy nhất.</p>
         <div class="intro-metrics"><span>01 <small>Dashboard</small></span><span>24/7 <small>Tầm nhìn hệ thống*</small></span></div>
       </div>
-      <p class="intro-note">* Giao diện Milestone 7 sử dụng làm mới thủ công; chưa hỗ trợ cảnh báo realtime.</p>
+      <p class="intro-note">* Giao diện Cảnh báo realtime chạy khi bạn đăng nhập và còn kết nối; sự kiện chưa xem được lưu để xem lại.</p>
     </section>
     <main class="login-panel">
       <div class="login-card">
@@ -48,7 +48,7 @@
         <a class="nav-link" href="#events-section">◷ <span>Lịch sử ngã</span></a>
       </nav>
       <div class="sidebar-bottom">
-        <div class="help-note">Giao diện cập nhật theo yêu cầu. Cảnh báo thời gian thực sẽ triển khai ở Milestone 8.</div>
+        <div class="help-note">Thông báo chưa xem vẫn được lưu trong Database khi trình duyệt mất kết nối.</div>
         <button id="logout-button" class="button quiet full-width" type="button">Đăng xuất <span aria-hidden="true">↗</span></button>
       </div>
     </aside>
@@ -62,6 +62,19 @@
         </div>
       </header>
       <p id="dashboard-message" class="notice" role="status" aria-live="polite" hidden></p>
+      <section id="alerts-panel" class="alerts-panel" aria-labelledby="alerts-title">
+        <div class="alerts-header">
+          <div>
+            <span class="eyebrow">CẢNH BÁO TÉ NGÃ</span>
+            <h2 id="alerts-title">Thông báo chưa xem <span id="alert-unread-count">0</span></h2>
+            <p class="muted">Cảnh báo được lưu trong PostgreSQL. Nhấn “Đã xem” để xác nhận bạn đã nhìn thấy thông báo.</p>
+          </div>
+          <div id="realtime-status" class="realtime-status" role="status">Đang kết nối...</div>
+        </div>
+        <div id="alert-list" class="alerts-list" role="log" aria-live="polite" aria-relevant="additions text">
+          <p class="muted">Đang tải thông báo...</p>
+        </div>
+      </section>
       <p class="last-update">Dữ liệu cập nhật lần cuối: <time id="updated-at">Chưa tải</time></p>
 
       <section class="metrics" aria-label="Thống kê tổng quan">
@@ -87,7 +100,7 @@
         <div class="section-heading"><div><span class="eyebrow">LỊCH SỬ</span><h2 id="events-title">Sự kiện ngã</h2><p id="event-scope" class="muted">Tất cả thiết bị được theo dõi</p></div><div class="pagination"><button id="previous-page" class="button secondary small" type="button" disabled>← Trước</button><span id="page-label">Trang 1</span><button id="next-page" class="button secondary small" type="button" disabled>Tiếp →</button></div></div>
         <div class="panel event-panel"><div class="table-scroll"><table><thead><tr><th>THỜI GIAN</th><th>THIẾT BỊ</th><th>LOẠI SỰ KIỆN</th><th>ĐỘ TIN CẬY</th><th>MODEL</th></tr></thead><tbody id="event-list"><tr><td colspan="5" class="empty-table">Đang tải lịch sử...</td></tr></tbody></table></div><p class="table-footer">Hiển thị tối đa 10 sự kiện/trang • Thời gian theo múi giờ trình duyệt</p></div>
       </section>
-      <footer class="footer">FallGuard · AIoT Fall Detection · Milestone 7 — Dashboard Web</footer>
+      <footer class="footer">FallGuard · AIoT Fall Detection · Milestone 8 — Realtime Alerts</footer>
     </main>
   </div>
 </body>

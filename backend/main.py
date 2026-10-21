@@ -1,4 +1,4 @@
-"""Khởi tạo FastAPI, đăng ký các API và phục vụ Dashboard Web."""
+"""Khởi tạo Backend, Dashboard và kênh cảnh báo trực tiếp."""
 
 from pathlib import Path
 
@@ -7,6 +7,8 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from auth_routes import router as auth_router
+from alert_routes import router as alerts_router
+from alert_websocket import router as alerts_ws_router
 from device_routes import router as device_router
 from device_status_routes import (
     edge_router as heartbeat_edge_router,
@@ -36,6 +38,10 @@ app.include_router(device_status_router)
 app.include_router(fall_edge_router)
 app.include_router(device_history_router)
 app.include_router(history_router)
+
+# API thông báo bền vững và WebSocket cảnh báo thời gian thực.
+app.include_router(alerts_router)
+app.include_router(alerts_ws_router)
 
 # Phục vụ CSS và JavaScript cùng nguồn với API để không cần CORS.
 app.mount(
