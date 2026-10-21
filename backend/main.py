@@ -14,6 +14,7 @@ from device_status_routes import (
     edge_router as heartbeat_edge_router,
     status_router as device_status_router,
 )
+from model_routes import admin_router as model_admin_router, edge_router as model_edge_router
 from fall_event_routes import (
     edge_router as fall_edge_router,
     device_history_router,
@@ -42,6 +43,10 @@ app.include_router(history_router)
 # API thông báo bền vững và WebSocket cảnh báo thời gian thực.
 app.include_router(alerts_router)
 app.include_router(alerts_ws_router)
+
+# Quản lý phiên bản model và cung cấp file model cho Edge Device.
+app.include_router(model_admin_router)
+app.include_router(model_edge_router)
 
 # Phục vụ CSS và JavaScript cùng nguồn với API để không cần CORS.
 app.mount(

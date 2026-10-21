@@ -7,3 +7,4 @@ PyJWT
 python-dotenv
 psycopg[binary]
 alembic
+python-multipart

@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, Float, ForeignKey, Index, String, Text, UniqueConstraint
+from sqlalchemy import BigInteger, DateTime, Float, ForeignKey, Index, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from database import Base
@@ -72,6 +72,20 @@ class ModelVersion(Base):
     version: Mapped[str] = mapped_column(String(50), primary_key=True)
     file_path: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    size_bytes: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+
+
+class ModelRelease(Base):
+    """Phiên bản model được phát hành chung cho các thiết bị Edge."""
+
+    __tablename__ = "model_releases"
+
+    release_id: Mapped[int] = mapped_column(primary_key=True)
+    version: Mapped[str] = mapped_column(
+        String(50), ForeignKey("model_versions.version", ondelete="RESTRICT"), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
 class DeviceHeartbeatState(Base):
