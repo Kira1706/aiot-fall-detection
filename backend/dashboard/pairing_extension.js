@@ -103,6 +103,7 @@ pairingEl("pairing-invite-form").addEventListener("submit", async (event) => {
     pairingEl("pairing-issued-value").textContent = result.invitation_token;
     pairingEl("pairing-issued-token").hidden = false;
     pairingMessage(`Mã mời dành riêng cho ${result.invitee_email}, hết hạn sau 24 giờ.`);
+    if (typeof dashboardManagementRefresh === "function") dashboardManagementRefresh();
   } catch (error) { pairingMessage(error.message, true); }
 });
 

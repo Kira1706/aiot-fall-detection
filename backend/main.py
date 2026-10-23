@@ -17,6 +17,7 @@ from alert_routes import router as alerts_router
 from alert_websocket import router as alerts_ws_router
 from device_routes import router as device_router
 from pairing_routes import router as pairing_router
+from management_routes import router as management_router
 from device_status_routes import (
     edge_router as heartbeat_edge_router,
     status_router as device_status_router,
@@ -61,6 +62,7 @@ app.include_router(google_router)
 app.include_router(account_router)
 app.include_router(device_router)
 app.include_router(pairing_router)
+app.include_router(management_router)
 app.include_router(heartbeat_edge_router)
 app.include_router(device_status_router)
 app.include_router(fall_edge_router)

@@ -57,3 +57,20 @@
 .pairing-share-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid #e2e8f0; }
 .pairing-share-row span { overflow-wrap: anywhere; }
 @media (max-width: 750px) { .pairing-grid { grid-template-columns: 1fr; } }
+
+/* Milestone 10.8: bộ lọc và phân trang nâng cao, hỗ trợ màn hình nhỏ. */
+.management-metrics { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:16px 0; }
+.management-metrics .metric {padding:18px;color:#58677d;font-size:.84rem}
+.management-metrics .metric strong {font-size:1.8rem;color:#1b293b;margin:8px 0 0}
+.management-filter {display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin:0 0 15px;}
+.management-filter label {display:grid;gap:5px;font-size:.78rem;font-weight:650;color:#41536e;min-width:145px;flex:1}
+.management-filter input,.management-filter select,#device-search {height:42px;border:1px solid #cbd5e1;border-radius:9px;padding:9px 11px;min-width:0;background:#fff;color:#26374d;width:100%}
+.management-filter button {height:42px;white-space:nowrap}
+.management-hint {width:100%;color:#64748b;font-size:.76rem;margin:0}
+.management-search-label {display:block;font-size:.78rem;color:#475569;margin:10px 0 6px;font-weight:650}
+#device-search {margin-bottom:14px}
+.management-pagination {display:flex;justify-content:flex-end;gap:11px;align-items:center;flex-wrap:wrap;padding:13px 19px;border-top:1px solid #e2e8f0;font-size:.8rem;color:#64748b}
+.management-pagination button:disabled {opacity:.45}
+.management-row-actions {display:flex;gap:8px}
+.management-empty {text-align:center;color:#94a3b8}
+@media(max-width:780px){.management-metrics{grid-template-columns:1fr}.management-filter label{min-width:100%}.management-filter .button{flex:1}}

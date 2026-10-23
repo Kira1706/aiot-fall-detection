@@ -9,6 +9,7 @@
   <script src="/dashboard-assets/app.js" defer></script>
   <script src="/dashboard-assets/account_extension.js" defer></script>
   <script src="/dashboard-assets/pairing_extension.js" defer></script>
+  <script src="/dashboard-assets/management_extension.js" defer></script>
   <meta name="referrer" content="no-referrer">
 </head>
 <body>
@@ -171,6 +172,8 @@
               <p class="muted">Chỉ gửi mã này cho đúng email được mời qua kênh riêng đáng tin cậy.</p>
               <button id="pairing-hide-token" type="button" class="button quiet">Ẩn mã mời</button>
             </div>
+            <h3>Lời mời đang chờ chấp nhận</h3>
+            <div id="management-invitations" class="pairing-share-list" aria-live="polite"></div>
             <h3>Những người đang theo dõi</h3>
             <div id="pairing-share-list" class="pairing-share-list"></div>
           </div>
@@ -178,6 +181,11 @@
         </div>
       </section>
 
+      <section class="management-metrics" aria-label="Thống kê theo quyền hiện tại">
+        <article class="metric"><span>Fall Event trong 30 ngày</span><strong id="management-falls30">—</strong></article>
+        <article class="metric"><span>Thông báo chưa xem</span><strong id="management-unread">—</strong></article>
+        <article class="metric"><span>Lời mời đang chờ của bạn</span><strong id="management-pending">—</strong></article>
+      </section>
       <section class="metrics" aria-label="Thống kê tổng quan">
         <article class="metric"><div class="metric-top"><span>Thiết bị theo dõi</span><span class="metric-symbol">▣</span></div><strong id="total-devices">—</strong><small>Trong tài khoản của bạn</small></article>
         <article class="metric"><div class="metric-top"><span>Đang online</span><span class="metric-symbol online-symbol">●</span></div><strong id="online-devices">—</strong><small>Trong lần làm mới gần nhất</small></article>
@@ -188,7 +196,7 @@
       <section class="device-section" id="devices-section" aria-labelledby="devices-title">
         <div class="section-heading"><div><span class="eyebrow">THIẾT BỊ</span><h2 id="devices-title">Danh sách đang theo dõi</h2></div><button class="button text-button" id="view-all-button" type="button">Xem tất cả sự kiện →</button></div>
         <div class="device-layout">
-          <div class="panel device-list-panel"><div class="panel-kicker">CHỌN THIẾT BỊ</div><div id="device-list" class="device-list" aria-live="polite"><p class="empty-state">Đang tải thiết bị...</p></div></div>
+          <div class="panel device-list-panel"><div class="panel-kicker">CHỌN THIẾT BỊ</div><label class="management-search-label" for="device-search">Tìm thiết bị theo mã hoặc tên</label><input id="device-search" type="search" maxlength="100" placeholder="Ví dụ: DEV-001, Thiết bị của bố"><div id="device-list" class="device-list" aria-live="polite"><p class="empty-state">Đang tải thiết bị...</p></div></div>
           <div class="panel detail-panel" aria-live="polite">
             <div class="panel-kicker">THÔNG TIN THIẾT BỊ</div>
             <div id="device-detail-empty" class="empty-detail"><span class="empty-symbol">▣</span><h3>Chọn một thiết bị</h3><p class="muted">Xem trạng thái kết nối và thời điểm heartbeat cuối.</p></div>
@@ -206,9 +214,36 @@
 
       <section class="events-section" id="events-section" aria-labelledby="events-title">
         <div class="section-heading"><div><span class="eyebrow">LỊCH SỬ</span><h2 id="events-title">Sự kiện ngã</h2><p id="event-scope" class="muted">Tất cả thiết bị được theo dõi</p></div><div class="pagination"><button id="previous-page" class="button secondary small" type="button" disabled>← Trước</button><span id="page-label">Trang 1</span><button id="next-page" class="button secondary small" type="button" disabled>Tiếp →</button></div></div>
+        <form id="history-filter-form" class="panel management-filter" aria-label="Lọc lịch sử té ngã">
+          <label>Tìm thiết bị<input id="history-search" type="search" maxlength="100" placeholder="Mã hoặc tên thiết bị"></label>
+          <label>Từ ngày<input id="history-from" type="date"></label>
+          <label>Đến hết ngày<input id="history-to" type="date"></label>
+          <label>Độ tin cậy tối thiểu<select id="history-confidence"><option value="">Tất cả</option><option value="0.5">50%</option><option value="0.7">70%</option><option value="0.85">85%</option></select></label>
+          <button class="button primary" type="submit">Áp dụng bộ lọc</button>
+          <button class="button secondary" id="history-filter-reset" type="button">Xóa lọc</button>
+          <p class="management-hint" id="history-total" role="status">Chưa tải lịch sử</p>
+        </form>
         <div class="panel event-panel"><div class="table-scroll"><table><thead><tr><th>THỜI GIAN</th><th>THIẾT BỊ</th><th>LOẠI SỰ KIỆN</th><th>ĐỘ TIN CẬY</th><th>MODEL</th></tr></thead><tbody id="event-list"><tr><td colspan="5" class="empty-table">Đang tải lịch sử...</td></tr></tbody></table></div><p class="table-footer">Hiển thị tối đa 10 sự kiện/trang • Thời gian theo múi giờ trình duyệt</p></div>
       </section>
-      <footer class="footer">FallGuard · AIoT Fall Detection · Milestone 10.7 — Secure Pairing & Sharing</footer>
+      <section class="events-section" id="notification-history" aria-labelledby="notification-history-title">
+        <div class="section-heading"><div><span class="eyebrow">NHẬT KÝ CẢNH BÁO</span><h2 id="notification-history-title">Lịch sử thông báo</h2><p class="muted">Xem thông báo đã xem và chưa xem. Đã xem không có nghĩa là sự cố đã được xử lý.</p></div></div>
+        <form id="notification-filter-form" class="panel management-filter" aria-label="Lọc lịch sử cảnh báo">
+          <label>Trạng thái<select id="notification-read-state"><option value="all">Tất cả</option><option value="unread">Chưa xem</option><option value="read">Đã xem</option></select></label>
+          <label>Tìm thiết bị<input id="notification-search" type="search" maxlength="100" placeholder="Mã hoặc tên thiết bị"></label>
+          <label>Từ ngày<input id="notification-from" type="date"></label>
+          <label>Đến hết ngày<input id="notification-to" type="date"></label>
+          <button class="button primary" type="submit">Áp dụng</button>
+          <button class="button secondary" id="notification-filter-reset" type="button">Xóa lọc</button>
+        </form>
+        <div class="panel event-panel">
+          <div class="table-scroll"><table>
+            <thead><tr><th>THỜI GIAN TẠO</th><th>THIẾT BỊ</th><th>SỰ KIỆN</th><th>TRẠNG THÁI</th><th>THAO TÁC</th></tr></thead>
+            <tbody id="management-alert-rows"><tr><td colspan="5">Đang tải lịch sử...</td></tr></tbody>
+          </table></div>
+          <div class="management-pagination"><span id="management-alert-total" role="status">—</span><button type="button" class="button secondary small" id="management-alert-prev">← Trước</button><span id="management-alert-page">Trang 1</span><button type="button" class="button secondary small" id="management-alert-next">Tiếp →</button></div>
+        </div>
+      </section>
+      <footer class="footer">FallGuard · AIoT Fall Detection · Milestone 10.8 — Dashboard Management</footer>
     </main>
   </div>
 </body>

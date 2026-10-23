@@ -1,0 +1,94 @@
+@'
+from pathlib import Path
+from email import policy
+from email.parser import BytesParser
+import re
+import webbrowser
+
+# Lấy danh sách email thử nghiệm, mới nhất trước.
+thu_muc = Path("dev_mail")
+
+danh_sach_email = sorted(
+    thu_muc.glob("*.eml"),
+    key=lambda tep: tep.stat().st_mtime,
+    reverse=True,
+)
+
+if not danh_sach_email:
+    print("Không tìm thấy email thử nghiệm.")
+    raise SystemExit
+
+# Đọc email và giải mã quoted-printable.
+with danh_sach_email[0].open("rb") as f:
+    email_obj = BytesParser(policy=policy.default).parse(f)
+
+noi_dung = email_obj.get_body(
+    preferencelist=("plain",)
+)
+
+van_ban = (
+    noi_dung.get_content()
+    if noi_dung is not None
+    else ""
+)
+
+# Chỉ lấy đường dẫn đặt lại mật khẩu.
+ket_qua = re.search(
+    r"http://localhost:8000/dashboard#reset=[^\s]+",
+    van_ban,
+)
+
+if ket_qua:
+    print("Đã tìm thấy liên kết đặt lại mật khẩu.")
+    webbrowser.open(ket_qua.group(0))
+else:
+    print("Không tìm thấy liên kết khôi phục trong email mới nhất.")
+'@ | python -
+
+
+
+
+
+
+
+
+
+@'
+from pathlib import Path
+from email import policy
+from email.parser import BytesParser
+import re
+
+# Tìm email xác minh được tạo gần nhất.
+thu_muc = Path("dev_mail")
+
+tep_email = sorted(
+    thu_muc.glob("*.eml"),
+    key=lambda tep: tep.stat().st_mtime,
+    reverse=True,
+)
+
+if not tep_email:
+    print("Chưa tìm thấy file email.")
+    raise SystemExit
+
+# Giải mã nội dung quoted-printable về văn bản bình thường.
+with tep_email[0].open("rb") as f:
+    email_obj = BytesParser(policy=policy.default).parse(f)
+
+noi_dung = email_obj.get_body(preferencelist=("plain",))
+van_ban = noi_dung.get_content() if noi_dung else ""
+
+# Lấy đường dẫn xác minh từ nội dung đã giải mã.
+ket_qua = re.search(
+    r"http://localhost:8000/dashboard#verify=[^\s]+",
+    van_ban,
+)
+
+if ket_qua:
+    print("Đã giải mã được liên kết xác minh.")
+    import webbrowser
+    webbrowser.open(ket_qua.group(0))
+else:
+    print("Không tìm thấy liên kết xác minh trong email mới nhất.")
+'@ | python -

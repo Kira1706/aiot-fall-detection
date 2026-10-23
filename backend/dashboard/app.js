@@ -44,6 +44,7 @@ function clearSession(message = "") {
   $("login-view").hidden = false;
   $("login-error").textContent = message;
   $("login-error").hidden = !message;
+  if (typeof dashboardManagementClear === "function") dashboardManagementClear();
   showAuthMode("login");
 }
 
@@ -125,7 +126,12 @@ function renderDevices() {
     return;
   }
 
-  for (const device of devices) {
+  // Chỉ lọc các Device đã được Backend cho phép; không lấy dữ liệu của người khác.
+  const keyword = ($("device-search")?.value || "").trim().toLocaleLowerCase("vi-VN");
+  const visibleDevices = devices.filter((device) =>
+    `${device.device_id} ${deviceName(device)}`.toLocaleLowerCase("vi-VN").includes(keyword)
+  );
+  for (const device of visibleDevices) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = `device-item${selectedDeviceId === device.device_id ? " selected" : ""}`;
@@ -227,14 +233,28 @@ async function loadDetail(version) {
 }
 
 async function loadEvents(version) {
-  const path = selectedDeviceId
-    ? `/devices/${encodeURIComponent(selectedDeviceId)}/fall-events`
-    : "/fall-events";
-  const query = `?limit=${PAGE_SIZE + 1}&offset=${currentPage * PAGE_SIZE}`;
-  const data = await apiRequest(path + query);
+  // Lịch sử nâng cao được lọc và phân trang tại Backend theo JWT hiện tại.
+  const params = new URLSearchParams({
+    limit: String(PAGE_SIZE), offset: String(currentPage * PAGE_SIZE),
+  });
+  if (selectedDeviceId) params.set("device_id", selectedDeviceId);
+  const search = $("history-search")?.value.trim();
+  if (search) params.set("q", search);
+  const start = $("history-from")?.value;
+  const end = $("history-to")?.value;
+  if (start) params.set("from_at", new Date(`${start}T00:00:00`).toISOString());
+  if (end) {
+    const exclusive = new Date(`${end}T00:00:00`);
+    exclusive.setDate(exclusive.getDate() + 1);
+    params.set("to_at", exclusive.toISOString());
+  }
+  const confidence = $("history-confidence")?.value;
+  if (confidence) params.set("min_confidence", confidence);
+  const page = await apiRequest(`/management/fall-events?${params.toString()}`);
   if (version !== requestVersion) return;
-  if (!Array.isArray(data)) throw new Error("Dữ liệu lịch sử không đúng định dạng.");
-  renderEvents(data.slice(0, PAGE_SIZE), data.length > PAGE_SIZE);
+  if (!Array.isArray(page?.items)) throw new Error("Trang lịch sử không hợp lệ.");
+  $("history-total").textContent = `Tổng ${page.total} sự kiện phù hợp`;
+  renderEvents(page.items, page.has_next);
 }
 
 function renderScope() {
@@ -287,6 +307,7 @@ async function refreshDashboard() {
     await Promise.all([loadDetail(version), loadEvents(version)]);
     if (version !== requestVersion) return;
     $("updated-at").textContent = formatDate(new Date().toISOString());
+    if (typeof dashboardManagementRefresh === "function") void dashboardManagementRefresh();
   } catch (error) {
     if (version === requestVersion) showMessage(error.message, true);
   } finally {
@@ -493,6 +514,7 @@ function receiveAlert(data) {
   renderAlertList();
   // Lịch sử ngã vẫn lấy từ API có phân quyền như Milestone 7.
   refreshDashboard();
+  if (typeof dashboardManagementRefresh === "function") void dashboardManagementRefresh();
 }
 
 async function loadUnreadAlerts() {
