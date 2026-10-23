@@ -164,7 +164,10 @@ def login_account(
     # Không cho phép đăng nhập bằng mã băm giả của dữ liệu seed.
     if not account.password_hash.startswith("$argon2id$"):
         raise invalid_credentials
-
+    # Tài khoản Google không có mật khẩu nội bộ.
+    if not account.password_hash:
+        raise invalid_credentials
+    
     # Xác minh mật khẩu gốc với mã băm trong Database.
     password_is_valid = verify_password(
         payload.password,

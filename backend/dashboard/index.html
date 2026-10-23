@@ -7,6 +7,8 @@
   <title>FallGuard | AIoT Dashboard</title>
   <link rel="stylesheet" href="/dashboard-assets/styles.css">
   <script src="/dashboard-assets/app.js" defer></script>
+  <script src="/dashboard-assets/account_extension.js" defer></script>
+  <meta name="referrer" content="no-referrer">
 </head>
 <body>
   <div id="login-view" class="auth-layout">
@@ -23,8 +25,8 @@
     <main class="login-panel">
       <div class="login-card">
         <span class="eyebrow">CỔNG NGƯỜI CHĂM SÓC</span>
-        <h2>Chào mừng trở lại</h2>
-        <p class="muted">Đăng nhập bằng tài khoản đã đăng ký trên Backend.</p>
+        <h2 id="auth-title">Chào mừng trở lại</h2>
+        <p class="muted" id="auth-description">Đăng nhập để theo dõi các thiết bị được cấp quyền.</p>
         <form id="login-form" autocomplete="on">
           <label for="email">Địa chỉ email</label>
           <input id="email" type="email" name="email" placeholder="caregiver@example.com" autocomplete="username" required>
@@ -33,7 +35,39 @@
           <p id="login-error" class="error-text" role="alert" hidden></p>
           <button id="login-button" class="button primary full-width" type="submit">Đăng nhập <span aria-hidden="true">→</span></button>
         </form>
-        <p class="login-hint">Phiên đăng nhập được giữ trong bộ nhớ trình duyệt. Tải lại trang sẽ cần đăng nhập lại.</p>
+        <form id="register-form" autocomplete="on" hidden>
+          <label for="register-name">Tên người chăm sóc</label>
+          <input id="register-name" type="text" maxlength="100" autocomplete="name" required placeholder="Ví dụ: Nguyễn Văn A">
+          <label for="register-email">Địa chỉ email</label>
+          <input id="register-email" type="email" maxlength="255" autocomplete="email" required placeholder="caregiver@example.com">
+          <label for="register-password">Mật khẩu (ít nhất 8 ký tự)</label>
+          <input id="register-password" type="password" minlength="8" maxlength="128" autocomplete="new-password" required>
+          <label for="register-confirm">Nhập lại mật khẩu</label>
+          <input id="register-confirm" type="password" autocomplete="new-password" required>
+          <p id="register-error" class="error-text" role="alert" hidden></p>
+          <button id="register-button" class="button primary full-width" type="submit">Tạo tài khoản <span aria-hidden="true">→</span></button>
+        </form>
+        <button type="button" id="forgot-toggle" class="button text-button">Quên mật khẩu?</button>
+        <form id="forgot-form" hidden>
+          <label for="forgot-email">Email nhận hướng dẫn đặt lại mật khẩu</label>
+          <input id="forgot-email" type="email" autocomplete="email" required placeholder="example@gmail.com">
+          <button type="submit" class="button secondary full-width">Gửi hướng dẫn qua email</button>
+        </form>
+        <form id="reset-form" hidden>
+          <label for="reset-password">Mật khẩu mới (10–128 ký tự)</label>
+          <input id="reset-password" type="password" minlength="10" maxlength="128" required autocomplete="new-password">
+          <button type="submit" class="button primary full-width">Đặt lại mật khẩu</button>
+        </form>
+        <p id="account-public-message" class="muted" role="status" aria-live="polite" hidden></p>
+        <div class="auth-divider"><span>hoặc</span></div>
+        <a id="google-button" class="button google-button full-width" href="/auth/google/start">
+          <span class="google-mark" aria-hidden="true">G</span> Tiếp tục với Google
+        </a>
+        <p class="auth-switch">
+          <span id="auth-switch-caption">Chưa có tài khoản?</span>
+          <button id="auth-switch-button" type="button">Đăng ký miễn phí</button>
+        </p>
+        <p class="login-hint">Tài khoản Google mới sẽ được tạo sau khi bạn chọn và xác nhận tài khoản Google. Không cần cung cấp mật khẩu Gmail cho ứng dụng.</p>
       </div>
     </main>
   </div>
@@ -44,6 +78,7 @@
       <p class="sidebar-heading">KHÔNG GIAN QUẢN LÝ</p>
       <nav aria-label="Điều hướng chính">
         <a class="nav-link active" href="#overview">◫ <span>Tổng quan</span></a>
+        <a class="nav-link" href="#account-section">♙ <span>Tài khoản</span></a>
         <a class="nav-link" href="#devices-section">▣ <span>Thiết bị</span></a>
         <a class="nav-link" href="#events-section">◷ <span>Lịch sử ngã</span></a>
       </nav>
@@ -77,6 +112,31 @@
       </section>
       <p class="last-update">Dữ liệu cập nhật lần cuối: <time id="updated-at">Chưa tải</time></p>
 
+      <section id="account-section" class="panel account-panel" aria-labelledby="account-section-title">
+        <div class="section-heading"><div><span class="eyebrow">BẢO MẬT TÀI KHOẢN</span><h2 id="account-section-title">Hồ sơ và đăng nhập</h2></div></div>
+        <p id="account-status" class="muted" role="status">Đang tải hồ sơ...</p>
+        <form id="profile-form" class="account-form">
+          <label for="profile-name">Tên hiển thị</label>
+          <input id="profile-name" type="text" maxlength="100" required>
+          <button class="button secondary" type="submit">Cập nhật tên</button>
+        </form>
+        <div class="account-form">
+          <button id="request-verification" class="button secondary" type="button">Gửi email xác minh</button>
+        </div>
+        <form id="change-password-form" class="account-form">
+          <label for="current-password">Mật khẩu hiện tại</label>
+          <input id="current-password" type="password" autocomplete="current-password" required>
+          <label for="new-password">Mật khẩu mới</label>
+          <input id="new-password" type="password" minlength="10" maxlength="128" autocomplete="new-password" required>
+          <button type="submit" class="button secondary">Đổi mật khẩu</button>
+        </form>
+        <div class="account-form">
+          <label for="google-link-password">Mật khẩu để xác nhận liên kết Google</label>
+          <input id="google-link-password" type="password" autocomplete="current-password">
+          <button type="button" id="link-google-button" class="button secondary">Liên kết tài khoản Google</button>
+        </div>
+      </section>
+
       <section class="metrics" aria-label="Thống kê tổng quan">
         <article class="metric"><div class="metric-top"><span>Thiết bị theo dõi</span><span class="metric-symbol">▣</span></div><strong id="total-devices">—</strong><small>Trong tài khoản của bạn</small></article>
         <article class="metric"><div class="metric-top"><span>Đang online</span><span class="metric-symbol online-symbol">●</span></div><strong id="online-devices">—</strong><small>Trong lần làm mới gần nhất</small></article>
@@ -91,7 +151,14 @@
           <div class="panel detail-panel" aria-live="polite">
             <div class="panel-kicker">THÔNG TIN THIẾT BỊ</div>
             <div id="device-detail-empty" class="empty-detail"><span class="empty-symbol">▣</span><h3>Chọn một thiết bị</h3><p class="muted">Xem trạng thái kết nối và thời điểm heartbeat cuối.</p></div>
-            <div id="device-detail" hidden><div class="detail-heading"><div><p class="eyebrow">THIẾT BỊ ĐANG CHỌN</p><h3 id="detail-name"></h3><p class="muted" id="detail-id"></p></div><span id="detail-status" class="status-pill">—</span></div><dl class="detail-grid"><div><dt>Lần heartbeat cuối</dt><dd id="detail-seen">—</dd></div><div><dt>Phiên bản AI model</dt><dd id="detail-model">—</dd></div><div><dt>Ngưỡng timeout</dt><dd id="detail-timeout">—</dd></div></dl></div>
+            <div id="device-detail" hidden><div class="detail-heading"><div><p class="eyebrow">THIẾT BỊ ĐANG CHỌN</p><h3 id="detail-name"></h3><p class="muted" id="detail-id"></p></div><span id="detail-status" class="status-pill">—</span></div><dl class="detail-grid"><div><dt>Lần heartbeat cuối</dt><dd id="detail-seen">—</dd></div><div><dt>Phiên bản AI model</dt><dd id="detail-model">—</dd></div><div><dt>Ngưỡng timeout</dt><dd id="detail-timeout">—</dd></div></dl>
+              <div id="device-actions" class="account-form">
+                <label for="rename-device-name">Đổi tên thiết bị đang chọn</label>
+                <input id="rename-device-name" type="text" maxlength="100" placeholder="Tên thiết bị">
+                <button id="rename-device-button" type="button" class="button secondary">Lưu tên</button>
+                <button id="unlink-device-button" type="button" class="button secondary">Hủy theo dõi</button>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -100,7 +167,7 @@
         <div class="section-heading"><div><span class="eyebrow">LỊCH SỬ</span><h2 id="events-title">Sự kiện ngã</h2><p id="event-scope" class="muted">Tất cả thiết bị được theo dõi</p></div><div class="pagination"><button id="previous-page" class="button secondary small" type="button" disabled>← Trước</button><span id="page-label">Trang 1</span><button id="next-page" class="button secondary small" type="button" disabled>Tiếp →</button></div></div>
         <div class="panel event-panel"><div class="table-scroll"><table><thead><tr><th>THỜI GIAN</th><th>THIẾT BỊ</th><th>LOẠI SỰ KIỆN</th><th>ĐỘ TIN CẬY</th><th>MODEL</th></tr></thead><tbody id="event-list"><tr><td colspan="5" class="empty-table">Đang tải lịch sử...</td></tr></tbody></table></div><p class="table-footer">Hiển thị tối đa 10 sự kiện/trang • Thời gian theo múi giờ trình duyệt</p></div>
       </section>
-      <footer class="footer">FallGuard · AIoT Fall Detection · Milestone 8 — Realtime Alerts</footer>
+      <footer class="footer">FallGuard · AIoT Fall Detection · Milestone 10.5 — Accounts & Google Login</footer>
     </main>
   </div>
 </body>

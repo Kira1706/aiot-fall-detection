@@ -8,3 +8,8 @@ python-dotenv
 psycopg[binary]
 alembic
 python-multipart
+authlib>=1.4,<2
+itsdangerous>=2.2,<3
+httpx>=0.27,<1
+argon2-cffi>=23
+email-validator>=2

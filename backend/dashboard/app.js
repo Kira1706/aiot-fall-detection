@@ -44,6 +44,7 @@ function clearSession(message = "") {
   $("login-view").hidden = false;
   $("login-error").textContent = message;
   $("login-error").hidden = !message;
+  showAuthMode("login");
 }
 
 async function apiRequest(path, { method = "GET", body = null, authenticated = true } = {}) {
@@ -293,6 +294,116 @@ async function refreshDashboard() {
   }
 }
 
+// Tự đăng ký email/mật khẩu hoặc chọn tài khoản Google.
+let authMode = "login";
+
+function showAuthMode(mode) {
+  authMode = mode;
+  const register = mode === "register";
+  $("login-form").hidden = register;
+  $("register-form").hidden = !register;
+  $("auth-title").textContent = register ? "Tạo tài khoản caregiver" : "Chào mừng trở lại";
+  $("auth-description").textContent = register
+    ? "Tạo tài khoản bằng email hoặc tiếp tục nhanh với Google."
+    : "Đăng nhập để theo dõi các thiết bị được cấp quyền.";
+  $("auth-switch-caption").textContent = register ? "Đã có tài khoản?" : "Chưa có tài khoản?";
+  $("auth-switch-button").textContent = register ? "Đăng nhập" : "Đăng ký miễn phí";
+  $("login-error").hidden = true;
+  $("register-error").hidden = true;
+}
+
+async function activateSession(loginData) {
+  if (!loginData?.access_token || !Number.isFinite(Number(loginData.expires_in))) {
+    throw new Error("Backend trả thông tin phiên đăng nhập không hợp lệ.");
+  }
+  accessToken = loginData.access_token;
+  expiresAt = Date.now() + Number(loginData.expires_in) * 1000;
+  $("password").value = "";
+  const me = await apiRequest("/auth/me");
+  $("account-name").textContent = me.display_name || "Caregiver";
+  $("account-email").textContent = me.email || "";
+  $("login-view").hidden = true;
+  $("dashboard-view").hidden = false;
+  selectedDeviceId = null;
+  currentPage = 0;
+  await refreshDashboard();
+  await loadUnreadAlerts();
+  startRealtime();
+}
+
+async function registerAccount(event) {
+  event.preventDefault();
+  $("register-error").hidden = true;
+  const password = $("register-password").value;
+  if (password !== $("register-confirm").value) {
+    $("register-error").textContent = "Hai mật khẩu không khớp.";
+    $("register-error").hidden = false;
+    return;
+  }
+  $("register-button").disabled = true;
+  try {
+    const email = $("register-email").value.trim();
+    await apiRequest("/auth/register", {
+      method: "POST", authenticated: false,
+      body: {
+        display_name: $("register-name").value.trim(),
+        email,
+        password,
+      },
+    });
+    const loginData = await apiRequest("/auth/login", {
+      method: "POST", authenticated: false,
+      body: {email, password},
+    });
+    $("register-password").value = "";
+    $("register-confirm").value = "";
+    await activateSession(loginData);
+  } catch (error) {
+    if (!$("login-view").hidden) {
+      $("register-error").textContent = error.message;
+      $("register-error").hidden = false;
+    } else {
+      showMessage(error.message, true);
+    }
+  } finally {
+    $("register-button").disabled = false;
+  }
+}
+
+async function completeGoogleRedirect() {
+  const params = new URLSearchParams(window.location.search);
+  const googleFlag = params.get("google");
+  const googleError = params.get("google_error");
+  const googleLinked = params.get("linked") === "1";
+  if (googleFlag === null && googleError === null) return;
+  // Không để URL giữ lại cờ đăng nhập Google sau khi xử lý.
+  window.history.replaceState({}, "", "/dashboard");
+  if (googleError) {
+    const errors = {
+      conflict: "Email này đã có tài khoản. Vui lòng đăng nhập bằng mật khẩu; hệ thống chưa tự liên kết hai phương thức.",
+      oauth: "Google đã hủy hoặc từ chối yêu cầu đăng nhập.",
+      verify: "Google chưa cung cấp tài khoản có email được xác minh.",
+      server: "Chưa thể hoàn tất đăng nhập Google. Vui lòng thử lại.",
+      link_conflict: "Liên kết Google thất bại: email không khớp hoặc Google đã dùng ở tài khoản khác.",
+      link_expired: "Phiên liên kết Google hết hạn. Vui lòng thử lại.",
+    };
+    $("login-error").textContent = errors[googleError] || errors.server;
+    $("login-error").hidden = false;
+    return;
+  }
+  try {
+    // Cookie HttpOnly chỉ gửi cùng nguồn; JWT trả qua JSON, không nằm trong URL.
+    const loginData = await apiRequest("/auth/google/complete", {
+      method: "POST", authenticated: false,
+    });
+    await activateSession(loginData);
+    if (googleLinked) showMessage("Đã liên kết Google thành công.");
+  } catch (error) {
+    $("login-error").textContent = error.message;
+    $("login-error").hidden = false;
+  }
+}
+
 async function login(event) {
   event.preventDefault();
   $("login-error").hidden = true;
@@ -306,19 +417,7 @@ async function login(event) {
     if (!loginData?.access_token || !Number.isFinite(Number(loginData.expires_in))) {
       throw new Error("Backend trả thông tin đăng nhập không hợp lệ.");
     }
-    accessToken = loginData.access_token;
-    expiresAt = Date.now() + Number(loginData.expires_in) * 1000;
-    $("password").value = "";
-    const me = await apiRequest("/auth/me");
-    $("account-name").textContent = me.display_name || "Caregiver";
-    $("account-email").textContent = me.email || "";
-    $("login-view").hidden = true;
-    $("dashboard-view").hidden = false;
-    selectedDeviceId = null;
-    currentPage = 0;
-    await refreshDashboard();
-    await loadUnreadAlerts();
-    startRealtime();
+    await activateSession(loginData);
   } catch (error) {
     if ($("login-view").hidden === false) {
       $("login-error").textContent = error.message;
@@ -494,3 +593,10 @@ $("refresh-button").addEventListener("click", refreshDashboard);
 $("view-all-button").addEventListener("click", () => selectDevice(null));
 $("previous-page").addEventListener("click", () => changePage(-1));
 $("next-page").addEventListener("click", () => changePage(1));
+
+// Giao diện đăng ký và phản hồi sau khi Google chuyển hướng về Dashboard.
+$("register-form").addEventListener("submit", registerAccount);
+$("auth-switch-button").addEventListener("click", () => {
+  showAuthMode(authMode === "login" ? "register" : "login");
+});
+completeGoogleRedirect();

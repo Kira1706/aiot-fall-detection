@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import BigInteger, DateTime, Float, ForeignKey, Index, String, Text, UniqueConstraint
+from sqlalchemy import BigInteger, CheckConstraint, DateTime, Float, ForeignKey, Index, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from database import Base
@@ -12,11 +12,23 @@ class Account(Base):
     """Tài khoản người chăm sóc."""
 
     __tablename__ = "accounts"
+    __table_args__ = (
+        UniqueConstraint("google_sub", name="uq_accounts_google_sub"),
+        CheckConstraint(
+            "password_hash IS NOT NULL OR google_sub IS NOT NULL",
+            name="ck_accounts_has_auth_method",
+        ),
+    )
 
     account_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
-    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    # Tài khoản Google không bắt buộc có mật khẩu nội bộ.
+    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # Google sub cố định là định danh đăng nhập, không dùng email làm khóa.
+    google_sub: Mapped[str | None] = mapped_column(String(255), nullable=True)
     display_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    # NULL đối với email chưa được người dùng xác minh.
+    email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class Device(Base):
@@ -126,3 +138,27 @@ class AlertNotification(Base):
     read_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+
+
+class AccountActionToken(Base):
+    """Lưu SHA-256 của token xác minh/khôi phục, không lưu token gốc."""
+
+    __tablename__ = "account_action_tokens"
+    __table_args__ = (
+        UniqueConstraint("token_hash", name="uq_account_action_tokens_hash"),
+        CheckConstraint(
+            "purpose IN ('verify_email', 'reset_password')",
+            name="ck_account_action_purpose",
+        ),
+        Index("ix_account_action_tokens_account_purpose", "account_id", "purpose", "created_at"),
+    )
+
+    token_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    account_id: Mapped[int] = mapped_column(
+        ForeignKey("accounts.account_id", ondelete="CASCADE"), nullable=False
+    )
+    purpose: Mapped[str] = mapped_column(String(24), nullable=False)
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
