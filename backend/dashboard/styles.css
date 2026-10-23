@@ -48,3 +48,12 @@
 #forgot-form input, #reset-form input { display:block; width:100%; margin:10px 0; }
 #account-public-message { padding: 10px; border-radius: 8px; background: #eff6ff; }
 @media (max-width: 680px) { .account-panel { padding: 16px; } .account-form .button { width: 100%; } }
+
+/* Bố cục ghép nối và chia sẻ thiết bị của Milestone 10.7. */
+.pairing-panel { margin-top: 24px; padding: 24px; }
+.pairing-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.pairing-grid h3, #pairing-owner-panel h3 { margin: 12px 0; }
+.pairing-secret { background: #fff7e4; padding: 14px; border-radius: 12px; margin: 16px 0; overflow-wrap: anywhere; }
+.pairing-share-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid #e2e8f0; }
+.pairing-share-row span { overflow-wrap: anywhere; }
+@media (max-width: 750px) { .pairing-grid { grid-template-columns: 1fr; } }

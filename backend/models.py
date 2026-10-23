@@ -162,3 +162,58 @@ class AccountActionToken(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class DeviceOwnership(Base):
+    """Một Device chỉ có một caregiver giữ quyền chủ sở hữu."""
+
+    __tablename__ = "device_ownerships"
+
+    device_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("devices.device_id", ondelete="CASCADE"), primary_key=True
+    )
+    account_id: Mapped[int] = mapped_column(
+        ForeignKey("accounts.account_id", ondelete="RESTRICT"), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class DevicePairingToken(Base):
+    """Lưu mã ghép nối dạng băm, một mã đang có hiệu lực trên mỗi Device."""
+
+    __tablename__ = "device_pairing_tokens"
+    __table_args__ = (UniqueConstraint("token_hash", name="uq_device_pairing_token_hash"),)
+
+    device_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("devices.device_id", ondelete="CASCADE"), primary_key=True
+    )
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class DeviceShareInvitation(Base):
+    """Mã mời một lần chỉ cho tài khoản được chỉ định."""
+
+    __tablename__ = "device_share_invitations"
+    __table_args__ = (
+        UniqueConstraint("token_hash", name="uq_device_share_invitation_hash"),
+        Index("ix_device_invitations_target", "device_id", "invited_account_id"),
+    )
+
+    invitation_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    device_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("devices.device_id", ondelete="CASCADE"), nullable=False
+    )
+    invited_account_id: Mapped[int] = mapped_column(
+        ForeignKey("accounts.account_id", ondelete="CASCADE"), nullable=False
+    )
+    invited_by_account_id: Mapped[int] = mapped_column(
+        ForeignKey("accounts.account_id", ondelete="RESTRICT"), nullable=False
+    )
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="/dashboard-assets/styles.css">
   <script src="/dashboard-assets/app.js" defer></script>
   <script src="/dashboard-assets/account_extension.js" defer></script>
+  <script src="/dashboard-assets/pairing_extension.js" defer></script>
   <meta name="referrer" content="no-referrer">
 </head>
 <body>
@@ -137,6 +138,46 @@
         </div>
       </section>
 
+      <section class="panel pairing-panel" id="pairing-section" aria-labelledby="pairing-title">
+        <div class="section-heading"><div><span class="eyebrow">GHÉP NỐI & CHIA SẺ AN TOÀN</span><h2 id="pairing-title">Quản lý quyền thiết bị</h2></div></div>
+        <p class="muted">Mã ghép nối được quản trị viên cấp riêng; mã chia sẻ do chủ sở hữu tạo. Mã chỉ hiển thị một lần.</p>
+        <p id="pairing-message" role="status" class="muted"></p>
+        <div class="pairing-grid">
+          <form id="pairing-claim-form" class="account-form">
+            <h3>Ghép nối thiết bị mới</h3>
+            <label for="pairing-token">Mã ghép nối từ quản trị viên</label>
+            <input id="pairing-token" type="text" maxlength="128" autocomplete="off" required>
+            <button type="submit" class="button secondary">Nhận quyền sở hữu</button>
+          </form>
+          <form id="pairing-accept-form" class="account-form">
+            <h3>Chấp nhận lời mời</h3>
+            <label for="invitation-token">Mã lời mời do chủ thiết bị gửi</label>
+            <input id="invitation-token" type="text" maxlength="128" autocomplete="off" required>
+            <button type="submit" class="button secondary">Chấp nhận theo dõi</button>
+          </form>
+        </div>
+        <div id="pairing-owner-panel" hidden>
+          <hr>
+          <h3>Quản lý thiết bị đã chọn: <span id="pairing-current-device"></span></h3>
+          <p id="pairing-current-role" class="muted"></p>
+          <div id="pairing-owner-actions" hidden>
+            <form id="pairing-invite-form" class="account-form">
+              <label for="pairing-invite-email">Email caregiver đã xác minh cần mời</label>
+              <input id="pairing-invite-email" type="email" maxlength="255" autocomplete="email" required>
+              <button type="submit" class="button secondary">Tạo mã mời</button>
+            </form>
+            <div id="pairing-issued-token" class="pairing-secret" hidden>
+              <p><strong>Mã mời (chỉ hiện một lần):</strong> <code id="pairing-issued-value"></code></p>
+              <p class="muted">Chỉ gửi mã này cho đúng email được mời qua kênh riêng đáng tin cậy.</p>
+              <button id="pairing-hide-token" type="button" class="button quiet">Ẩn mã mời</button>
+            </div>
+            <h3>Những người đang theo dõi</h3>
+            <div id="pairing-share-list" class="pairing-share-list"></div>
+          </div>
+          <p id="pairing-viewer-message" class="muted"></p>
+        </div>
+      </section>
+
       <section class="metrics" aria-label="Thống kê tổng quan">
         <article class="metric"><div class="metric-top"><span>Thiết bị theo dõi</span><span class="metric-symbol">▣</span></div><strong id="total-devices">—</strong><small>Trong tài khoản của bạn</small></article>
         <article class="metric"><div class="metric-top"><span>Đang online</span><span class="metric-symbol online-symbol">●</span></div><strong id="online-devices">—</strong><small>Trong lần làm mới gần nhất</small></article>
@@ -167,7 +208,7 @@
         <div class="section-heading"><div><span class="eyebrow">LỊCH SỬ</span><h2 id="events-title">Sự kiện ngã</h2><p id="event-scope" class="muted">Tất cả thiết bị được theo dõi</p></div><div class="pagination"><button id="previous-page" class="button secondary small" type="button" disabled>← Trước</button><span id="page-label">Trang 1</span><button id="next-page" class="button secondary small" type="button" disabled>Tiếp →</button></div></div>
         <div class="panel event-panel"><div class="table-scroll"><table><thead><tr><th>THỜI GIAN</th><th>THIẾT BỊ</th><th>LOẠI SỰ KIỆN</th><th>ĐỘ TIN CẬY</th><th>MODEL</th></tr></thead><tbody id="event-list"><tr><td colspan="5" class="empty-table">Đang tải lịch sử...</td></tr></tbody></table></div><p class="table-footer">Hiển thị tối đa 10 sự kiện/trang • Thời gian theo múi giờ trình duyệt</p></div>
       </section>
-      <footer class="footer">FallGuard · AIoT Fall Detection · Milestone 10.5 — Accounts & Google Login</footer>
+      <footer class="footer">FallGuard · AIoT Fall Detection · Milestone 10.7 — Secure Pairing & Sharing</footer>
     </main>
   </div>
 </body>

@@ -1,12 +1,7 @@
 """Quản lý Device và liên kết caregiver; trạng thái đọc từ Database."""
 
-import os
-from pathlib import Path
-
-from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from auth_dependencies import get_current_account
@@ -16,19 +11,7 @@ from device_permissions import get_authorized_device
 from device_schemas import DeviceLinkRequest, DeviceNicknameRequest, FollowedDeviceResponse
 from models import Account, AccountDevice, Device
 
-load_dotenv(Path(__file__).resolve().parent / ".env")
 router = APIRouter(prefix="/devices", tags=["Devices"])
-
-
-def require_demo_linking() -> None:
-    """Mặc định khóa liên kết Device chỉ dựa vào ID vì chưa xác minh chủ sở hữu."""
-
-    if os.getenv("DEVICE_LINK_DEMO_MODE", "false").lower() != "true":
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Chức năng liên kết thử nghiệm chưa được bật.",
-        )
-
 
 def build_device_response(
     device: Device, link: AccountDevice, db: Session
@@ -80,32 +63,11 @@ def link_device(
     current_account: Account = Depends(get_current_account),
     db: Session = Depends(get_db),
 ):
-    """Liên kết thử nghiệm, chỉ mở tại môi trường demo an toàn."""
-
-    require_demo_linking()
-    device = db.get(Device, payload.device_id)
-    if device is None:
-        raise HTTPException(status_code=404, detail="Không tìm thấy thiết bị.")
-
-    key = (current_account.account_id, device.device_id)
-    if db.get(AccountDevice, key) is not None:
-        raise HTTPException(status_code=409, detail="Bạn đã liên kết thiết bị này.")
-
-    link = AccountDevice(
-        account_id=current_account.account_id,
-        device_id=device.device_id,
-        display_name=payload.display_name,
+    """Đóng API demo cũ để không ai tự nhận quyền chỉ bằng Device ID."""
+    raise HTTPException(
+        status_code=status.HTTP_410_GONE,
+        detail="Liên kết bằng Device ID đã đóng. Hãy sử dụng mã ghép nối an toàn.",
     )
-    db.add(link)
-    try:
-        db.commit()
-    except IntegrityError:
-        db.rollback()
-        if db.get(AccountDevice, key) is not None:
-            raise HTTPException(status_code=409, detail="Bạn đã liên kết thiết bị này.")
-        raise
-    db.refresh(link)
-    return build_device_response(device, link, db)
 
 
 @router.patch("/{device_id}/nickname", response_model=FollowedDeviceResponse)
@@ -131,6 +93,13 @@ def unlink_device(
     """Chỉ xóa liên kết, không xóa Device hoặc FallEvent."""
 
     _, link = authorized_data
+    from models import DeviceOwnership
+    owner = db.get(DeviceOwnership, link.device_id)
+    if owner is not None and owner.account_id == link.account_id:
+        raise HTTPException(
+            status_code=409,
+            detail="Chủ sở hữu không thể tự hủy theo dõi. Hãy thực hiện quy trình chuyển quyền sau.",
+        )
     db.delete(link)
     db.commit()
     return None
