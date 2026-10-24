@@ -123,6 +123,8 @@ def consume_action_token(db: Session, raw: str, purpose: str, new_password: str 
         account.email_verified_at = now
     elif purpose == "reset_password":
         account.password_hash = hash_password(new_password)
+        # Thu hồi JWT đã phát hành trước khi đổi mật khẩu.
+        account.session_version += 1
     record.consumed_at = now
     # Thu hồi các mã còn lại của cùng mục đích.
     for item in db.scalars(
@@ -146,6 +148,8 @@ def change_password(db: Session, account: Account, old_password: str, new_passwo
     if old_password == new_password:
         raise HTTPException(status_code=422, detail="Mật khẩu mới phải khác mật khẩu cũ.")
     account.password_hash = hash_password(new_password)
+    # Đổi thông tin đăng nhập và thu hồi phiên trong cùng một commit.
+    account.session_version += 1
     db.commit()
 
 
@@ -164,5 +168,7 @@ def link_google_identity(db: Session, account: Account, claims: dict) -> Account
         raise HTTPException(status_code=409, detail="Tài khoản hiện tại đã liên kết Google khác.")
     account.google_sub = sub
     account.email_verified_at = utc_now()
+    # Tăng phiên để mọi token cũ phải đăng nhập lại.
+    account.session_version += 1
     db.commit()
     return account

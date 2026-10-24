@@ -9,6 +9,11 @@ from starlette.middleware.sessions import SessionMiddleware
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import text
+from database import SessionLocal
+from security_routes import router as security_router
+from security_middleware import SecurityGateMiddleware, security_http_audit
+from security_config import validate_runtime_configuration, setup_stdout_logs
 
 from auth_routes import router as auth_router
 from google_routes import router as google_router
@@ -40,6 +45,9 @@ SESSION_SECRET = os.getenv("GOOGLE_SESSION_SECRET", "")
 if len(SESSION_SECRET) < 32:
     raise RuntimeError("Thiếu GOOGLE_SESSION_SECRET (ít nhất 32 ký tự).")
 
+validate_runtime_configuration()
+setup_stdout_logs()
+
 app = FastAPI(
     title="AIoT Fall Detection Backend",
     description="Backend cho hệ thống AIoT phát hiện té ngã.",
@@ -56,8 +64,18 @@ app.add_middleware(
     session_cookie="aiot_google_oauth",
 )
 
+# Rate limit dùng chung PostgreSQL giữa các worker.
+app.add_middleware(SecurityGateMiddleware, session_factory=SessionLocal)
+
+
+@app.middleware("http")
+async def audit_http(request, call_next):
+    """Ghi request ID, độ trễ và audit hành động nhạy cảm."""
+    return await security_http_audit(request, call_next, SessionLocal)
+
 # Tiếp tục sử dụng các router đã PASS từ Milestone 3 đến 6.6.
 app.include_router(auth_router)
+app.include_router(security_router)
 app.include_router(google_router)
 app.include_router(account_router)
 app.include_router(device_router)
@@ -108,3 +126,15 @@ def health():
     """Kiểm tra tiến trình Backend có đang hoạt động."""
 
     return {"status": "ok"}
+
+
+@app.get("/ready", include_in_schema=False)
+def readiness():
+    """Chỉ báo Backend sẵn sàng nếu kết nối PostgreSQL còn hoạt động."""
+    from fastapi import HTTPException
+    try:
+        with SessionLocal() as db:
+            db.execute(text("SELECT 1"))
+    except Exception:
+        raise HTTPException(status_code=503, detail="Database chưa sẵn sàng.")
+    return {"status": "ready"}

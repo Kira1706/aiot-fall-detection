@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import BigInteger, CheckConstraint, DateTime, Float, ForeignKey, Index, String, Text, UniqueConstraint
+from sqlalchemy import BigInteger, CheckConstraint, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from database import Base
@@ -18,6 +18,7 @@ class Account(Base):
             "password_hash IS NOT NULL OR google_sub IS NOT NULL",
             name="ck_accounts_has_auth_method",
         ),
+        CheckConstraint("session_version >= 1", name="ck_accounts_session_version_positive"),
     )
 
     account_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
@@ -29,6 +30,8 @@ class Account(Base):
     display_name: Mapped[str] = mapped_column(String(100), nullable=False)
     # NULL đối với email chưa được người dùng xác minh.
     email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Khi tăng giá trị này, toàn bộ JWT cũ của Account bị thu hồi.
+    session_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
 
 
 class Device(Base):
@@ -217,3 +220,41 @@ class DeviceShareInvitation(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class SecurityRevokedToken(Base):
+    """Lưu dấu băm JWT đã đăng xuất, không lưu JWT gốc."""
+
+    __tablename__ = "security_revoked_tokens"
+    token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    account_id: Mapped[int] = mapped_column(ForeignKey("accounts.account_id", ondelete="CASCADE"), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class SecurityRateBucket(Base):
+    """Bộ đếm rate limit chia sẻ giữa các worker bằng Database."""
+
+    __tablename__ = "security_rate_buckets"
+    bucket_key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    count: Mapped[int] = mapped_column(Integer, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class SecurityAuditLog(Base):
+    """Nhật ký hành động bảo mật, không lưu token, mật khẩu, mã mời."""
+
+    __tablename__ = "security_audit_logs"
+    audit_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    actor_account_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    action: Mapped[str] = mapped_column(String(60), nullable=False)
+    result: Mapped[str] = mapped_column(String(24), nullable=False)
+    request_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    client_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
+
+# Tạo index phù hợp với truy vấn định kỳ và điều tra sự cố.
+Index("ix_revoked_tokens_expires_at", SecurityRevokedToken.expires_at)
+Index("ix_security_rate_expires_at", SecurityRateBucket.expires_at)
+Index("ix_security_audit_created", SecurityAuditLog.created_at)
+Index("ix_security_audit_actor", SecurityAuditLog.actor_account_id)

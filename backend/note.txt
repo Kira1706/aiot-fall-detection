@@ -92,3 +92,9 @@ if ket_qua:
 else:
     print("Không tìm thấy liên kết xác minh trong email mới nhất.")
 '@ | python -
+
+
+
+nếu tôi đăng nhập caregiver A tại 2 trình duyệt á thì lúc tôi tạo mã mời để mời người khác ở trình duyệt này thì bên trình duyệt kia nó không có hiện cái mã mời á
+với lại là cái trình duyệt mà tạo mã mời nếu người được mời đồng ý thì bên trình duyệt hiện ra người theo dỗi còn cái trình duyệt kia thì không hiện ra cái người theo dỗi luôn á mặc dù tôi đã đăng xuất ra vào lại vẫn không hiện
+tiếp theo là phần cập nhật tên á thì ở trình duyệt này tôi đổi tên tôi qua trình duyệt kia ấn làm mới nó vẫn hiện tên cũ cho tới khi tôi đăng xuất để đăng nhập vào thì nó mới đổi tên

@@ -610,7 +610,26 @@ function startRealtime() {
 
 // Liên kết các thao tác giao diện với API đã được bảo vệ.
 $("login-form").addEventListener("submit", login);
-$("logout-button").addEventListener("click", () => clearSession("Bạn đã đăng xuất khỏi Dashboard."));
+$("logout-all-button")?.addEventListener("click", async () => {
+  if (!window.confirm("Thu hồi mọi phiên đăng nhập cũ, kể cả các thiết bị khác?")) return;
+  try {
+    await apiRequest("/security/logout-all", { method: "POST" });
+    clearSession("Mọi phiên cũ đã bị thu hồi. Hãy đăng nhập lại.");
+  } catch (error) {
+    showMessage(`Không thể thu hồi toàn bộ phiên: ${error.message}`, true);
+  }
+});
+$("logout-button").addEventListener("click", async () => {
+  // Không chỉ xóa JWT ở trình duyệt; Server phải đánh dấu token đã đăng xuất.
+  try {
+    if (accessToken) await apiRequest("/security/logout", { method: "POST" });
+  } catch (_error) {
+    // Trình duyệt vẫn xóa token, nhưng chưa được coi là đã thu hồi phía Server.
+    console.warn("Không thể xác nhận thu hồi token ở Server; vui lòng thử đăng nhập lại và dùng Đăng xuất tất cả.");
+  } finally {
+    clearSession("Đã đóng phiên đăng nhập trên trình duyệt.");
+  }
+});
 $("refresh-button").addEventListener("click", refreshDashboard);
 $("view-all-button").addEventListener("click", () => selectDevice(null));
 $("previous-page").addEventListener("click", () => changePage(-1));

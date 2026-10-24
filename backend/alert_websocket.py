@@ -3,7 +3,6 @@
 import asyncio
 import time
 
-import jwt
 
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 from sqlalchemy import select
@@ -12,7 +11,8 @@ from urllib.parse import urlparse
 
 from alert_service import list_alerts
 from database import get_db
-from jwt_utils import decode_access_token
+from security_tokens import authenticate_secure_token
+from fastapi import HTTPException
 from models import Account
 
 
@@ -62,14 +62,11 @@ async def alerts_socket(
             await websocket.close(code=4401)
             return
         try:
-            payload = decode_access_token(token)
-        except jwt.PyJWTError:
+            account, payload = authenticate_secure_token(token, db)
+        except HTTPException:
             await websocket.close(code=4401)
             return
-        account_id = int(payload["sub"])
-        if db.scalar(select(Account.account_id).where(Account.account_id == account_id)) is None:
-            await websocket.close(code=4401)
-            return
+        account_id = account.account_id
 
         expiry = int(payload["exp"])
         await websocket.send_json({"type": "authenticated"})
@@ -80,9 +77,15 @@ async def alerts_socket(
                 await websocket.close(code=4401)
                 return
 
-            # Query luôn kiểm tra AccountDevice hiện tại, kể cả khi đã hủy liên kết.
-            # Chấm dứt transaction đọc trước mỗi vòng để tránh snapshot bị giữ lâu.
+            # Chấm dứt transaction trước vòng thăm dò quyền mới.
             db.rollback()
+            # Token có thể bị thu hồi khi WebSocket vẫn đang mở.
+            try:
+                authenticate_secure_token(token, db)
+            except HTTPException:
+                await websocket.close(code=4401)
+                return
+            # list_alerts tiếp tục lọc AccountDevice hiện hành sau khi thu hồi quyền.
             alerts = list_alerts(
                 db, account_id, after_id=cursor,
                 unread_only=True, limit=BATCH_SIZE,

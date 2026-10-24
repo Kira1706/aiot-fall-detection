@@ -12,7 +12,8 @@ from sqlalchemy.orm import Session
 
 from database import BASE_DIR, get_db
 from google_account_service import find_or_create_google_account
-from jwt_utils import create_access_token, JWT_ACCESS_TOKEN_EXPIRE_MINUTES
+from jwt_utils import JWT_ACCESS_TOKEN_EXPIRE_MINUTES
+from security_tokens import create_secure_access_token
 
 load_dotenv(BASE_DIR / ".env")
 
@@ -95,7 +96,7 @@ def complete_google_login(request: Request, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Không tìm thấy tài khoản Google.")
 
     return {
-        "access_token": create_access_token(account.account_id),
+        "access_token": create_secure_access_token(account.account_id, db),
         "token_type": "bearer",
         "expires_in": JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60,
     }
