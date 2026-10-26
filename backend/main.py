@@ -15,6 +15,7 @@ from security_routes import router as security_router
 from security_middleware import SecurityGateMiddleware, security_http_audit
 from security_config import validate_runtime_configuration, setup_stdout_logs
 from reliability_routes import router as reliability_router
+from admin_routes import router as admin_router, CONSOLE as ADMIN_CONSOLE_DIR
 
 from auth_routes import router as auth_router
 from google_routes import router as google_router
@@ -96,6 +97,7 @@ app.include_router(alerts_ws_router)
 # Quản lý phiên bản model và cung cấp file model cho Edge Device.
 app.include_router(model_admin_router)
 app.include_router(model_edge_router)
+app.include_router(admin_router)
 
 # Phục vụ CSS và JavaScript cùng nguồn với API để không cần CORS.
 app.mount(
@@ -104,6 +106,12 @@ app.mount(
     name="dashboard-assets",
 )
 
+# Phục vụ CSS, JavaScript của trang quản trị.
+app.mount(
+    "/admin-assets",
+    StaticFiles(directory=str(ADMIN_CONSOLE_DIR)),
+    name="admin-assets",
+)
 
 @app.get("/dashboard", include_in_schema=False)
 def dashboard():

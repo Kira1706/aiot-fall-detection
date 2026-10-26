@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>FallGuard | AIoT Dashboard</title>
+  <link rel="stylesheet" href="/dashboard-assets/styles.css">
+  <script src="/dashboard-assets/app.js" defer></script>
+  <script src="/dashboard-assets/account_extension.js" defer></script>
+  <script src="/dashboard-assets/pairing_extension.js" defer></script>
+  <script src="/dashboard-assets/management_extension.js" defer></script>
+  <meta name="referrer" content="no-referrer">
+</head>
+<body>
+  <div id="login-view" class="auth-layout">
+    <section class="intro-panel" aria-label="Giới thiệu ứng dụng">
+      <div class="brand brand-light"><span class="brand-icon">✦</span><span>FallGuard<span class="brand-dot">.</span></span></div>
+      <div class="intro-content">
+        <span class="eyebrow eyebrow-light">AIoT FALL DETECTION SYSTEM</span>
+        <h1>Chăm sóc an tâm.<br>Thông tin rõ ràng.</h1>
+        <p>Quản lý thiết bị, theo dõi kết nối và xem lại những sự kiện ngã từ một giao diện duy nhất.</p>
+        <div class="intro-metrics"><span>01 <small>Dashboard</small></span><span>24/7 <small>Tầm nhìn hệ thống*</small></span></div>
+      </div>
+      <p class="intro-note">* Giao diện Cảnh báo realtime chạy khi bạn đăng nhập và còn kết nối; sự kiện chưa xem được lưu để xem lại.</p>
+    </section>
+    <main class="login-panel">
+      <div class="login-card">
+        <span class="eyebrow">CỔNG NGƯỜI CHĂM SÓC</span>
+        <h2 id="auth-title">Chào mừng trở lại</h2>
+        <p class="muted" id="auth-description">Đăng nhập để theo dõi các thiết bị được cấp quyền.</p>
+        <form id="login-form" autocomplete="on">
+          <label for="email">Địa chỉ email</label>
+          <input id="email" type="email" name="email" placeholder="caregiver@example.com" autocomplete="username" required>
+          <label for="password">Mật khẩu</label>
+          <input id="password" type="password" name="password" placeholder="Nhập mật khẩu" autocomplete="current-password" required>
+          <p id="login-error" class="error-text" role="alert" hidden></p>
+          <button id="login-button" class="button primary full-width" type="submit">Đăng nhập <span aria-hidden="true">→</span></button>
+        </form>
+        <form id="register-form" autocomplete="on" hidden>
+          <label for="register-name">Tên người chăm sóc</label>
+          <input id="register-name" type="text" maxlength="100" autocomplete="name" required placeholder="Ví dụ: Nguyễn Văn A">
+          <label for="register-email">Địa chỉ email</label>
+          <input id="register-email" type="email" maxlength="255" autocomplete="email" required placeholder="caregiver@example.com">
+          <label for="register-password">Mật khẩu (ít nhất 8 ký tự)</label>
+          <input id="register-password" type="password" minlength="8" maxlength="128" autocomplete="new-password" required>
+          <label for="register-confirm">Nhập lại mật khẩu</label>
+          <input id="register-confirm" type="password" autocomplete="new-password" required>
+          <p id="register-error" class="error-text" role="alert" hidden></p>
+          <button id="register-button" class="button primary full-width" type="submit">Tạo tài khoản <span aria-hidden="true">→</span></button>
+        </form>
+        <button type="button" id="forgot-toggle" class="button text-button">Quên mật khẩu?</button>
+        <form id="forgot-form" hidden>
+          <label for="forgot-email">Email nhận hướng dẫn đặt lại mật khẩu</label>
+          <input id="forgot-email" type="email" autocomplete="email" required placeholder="example@gmail.com">
+          <button type="submit" class="button secondary full-width">Gửi hướng dẫn qua email</button>
+        </form>
+        <form id="reset-form" hidden>
+          <label for="reset-password">Mật khẩu mới (10–128 ký tự)</label>
+          <input id="reset-password" type="password" minlength="10" maxlength="128" required autocomplete="new-password">
+          <button type="submit" class="button primary full-width">Đặt lại mật khẩu</button>
+        </form>
+        <p id="account-public-message" class="muted" role="status" aria-live="polite" hidden></p>
+        <div class="auth-divider"><span>hoặc</span></div>
+        <a id="google-button" class="button google-button full-width" href="/auth/google/start">
+          <span class="google-mark" aria-hidden="true">G</span> Tiếp tục với Google
+        </a>
+        <p class="auth-switch">
+          <span id="auth-switch-caption">Chưa có tài khoản?</span>
+          <button id="auth-switch-button" type="button">Đăng ký miễn phí</button>
+        </p>
+        <p class="login-hint">Tài khoản Google mới sẽ được tạo sau khi bạn chọn và xác nhận tài khoản Google. Không cần cung cấp mật khẩu Gmail cho ứng dụng.</p>
+      </div>
+    </main>
+  </div>
+
+  <div id="dashboard-view" class="app-layout" hidden>
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-icon">✦</span><span>FallGuard<span class="brand-dot">.</span></span></div>
+      <p class="sidebar-heading">KHÔNG GIAN QUẢN LÝ</p>
+      <nav aria-label="Điều hướng chính">
+        <a class="nav-link active" href="#overview">◫ <span>Tổng quan</span></a>
+        <a class="nav-link" href="#account-section">♙ <span>Tài khoản</span></a>
+        <a class="nav-link" href="#devices-section">▣ <span>Thiết bị</span></a>
+        <a class="nav-link" href="#events-section">◷ <span>Lịch sử ngã</span></a>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="help-note">Thông báo chưa xem vẫn được lưu trong Database khi trình duyệt mất kết nối.</div>
+        <button id="logout-button" class="button quiet full-width" type="button">Đăng xuất <span aria-hidden="true">↗</span></button>
+      </div>
+    </aside>
+
+    <main class="content" id="overview">
+      <header class="topbar">
+        <div><div class="eyebrow">BẢNG ĐIỀU KHIỂN / TỔNG QUAN</div><h1>Xin chào, <span id="account-name">Caregiver</span></h1><p class="muted">Theo dõi tình trạng thiết bị và những sự kiện gần đây.</p></div>
+        <div class="top-actions">
+          <span class="account-pill" id="account-email"></span>
+          <button id="refresh-button" class="button secondary" type="button">↻ Làm mới</button>
+        </div>
+      </header>
+      <p id="dashboard-message" class="notice" role="status" aria-live="polite" hidden></p>
+      <section id="alerts-panel" class="alerts-panel" aria-labelledby="alerts-title">
+        <div class="alerts-header">
+          <div>
+            <span class="eyebrow">CẢNH BÁO TÉ NGÃ</span>
+            <h2 id="alerts-title">Thông báo chưa xem <span id="alert-unread-count">0</span></h2>
+            <p class="muted">Cảnh báo được lưu trong PostgreSQL. Nhấn “Đã xem” để xác nhận bạn đã nhìn thấy thông báo.</p>
+          </div>
+          <div id="realtime-status" class="realtime-status" role="status">Đang kết nối...</div>
+        </div>
+        <div id="alert-list" class="alerts-list" role="log" aria-live="polite" aria-relevant="additions text">
+          <p class="muted">Đang tải thông báo...</p>
+        </div>
+      </section>
+      <p class="last-update">Dữ liệu cập nhật lần cuối: <time id="updated-at">Chưa tải</time></p>
+
+      <section id="account-section" class="panel account-panel" aria-labelledby="account-section-title">
+        <div class="section-heading"><div><span class="eyebrow">BẢO MẬT TÀI KHOẢN</span><h2 id="account-section-title">Hồ sơ và đăng nhập</h2></div></div>
+        <p id="account-status" class="muted" role="status">Đang tải hồ sơ...</p>
+        <form id="profile-form" class="account-form">
+          <label for="profile-name">Tên hiển thị</label>
+          <input id="profile-name" type="text" maxlength="100" required>
+          <button class="button secondary" type="submit">Cập nhật tên</button>
+        </form>
+        <div class="account-form">
+          <button id="request-verification" class="button secondary" type="button">Gửi email xác minh</button>
+        </div>
+        <form id="change-password-form" class="account-form">
+          <label for="current-password">Mật khẩu hiện tại</label>
+          <input id="current-password" type="password" autocomplete="current-password" required>
+          <label for="new-password">Mật khẩu mới</label>
+          <input id="new-password" type="password" minlength="10" maxlength="128" autocomplete="new-password" required>
+          <button type="submit" class="button secondary">Đổi mật khẩu</button>
+        </form>
+        <div class="account-form">
+          <label for="google-link-password">Mật khẩu để xác nhận liên kết Google</label>
+          <input id="google-link-password" type="password" autocomplete="current-password">
+          <button type="button" id="link-google-button" class="button secondary">Liên kết tài khoản Google</button>
+        </div>
+        <div class="account-form">
+          <button id="logout-all-button" class="button secondary" type="button">Đăng xuất tất cả thiết bị</button>
+          <p class="muted">Thu hồi mọi JWT cũ; bạn cần đăng nhập lại trên các trình duyệt đã sử dụng.</p>
+        </div>
+      </section>
+
+      <section class="panel pairing-panel" id="pairing-section" aria-labelledby="pairing-title">
+        <div class="section-heading"><div><span class="eyebrow">GHÉP NỐI & CHIA SẺ AN TOÀN</span><h2 id="pairing-title">Quản lý quyền thiết bị</h2></div></div>
+        <p class="muted">Mã ghép nối được quản trị viên cấp riêng; mã chia sẻ do chủ sở hữu tạo. Mã chỉ hiển thị một lần.</p>
+        <p id="pairing-message" role="status" class="muted"></p>
+        <div class="pairing-grid">
+          <form id="pairing-claim-form" class="account-form">
+            <h3>Ghép nối thiết bị mới</h3>
+            <label for="pairing-token">Mã ghép nối từ quản trị viên</label>
+            <input id="pairing-token" type="text" maxlength="128" autocomplete="off" required>
+            <button type="submit" class="button secondary">Nhận quyền sở hữu</button>
+          </form>
+          <form id="pairing-accept-form" class="account-form">
+            <h3>Chấp nhận lời mời</h3>
+            <label for="invitation-token">Mã lời mời do chủ thiết bị gửi</label>
+            <input id="invitation-token" type="text" maxlength="128" autocomplete="off" required>
+            <button type="submit" class="button secondary">Chấp nhận theo dõi</button>
+          </form>
+        </div>
+        <div id="pairing-owner-panel" hidden>
+          <hr>
+          <h3>Quản lý thiết bị đã chọn: <span id="pairing-current-device"></span></h3>
+          <p id="pairing-current-role" class="muted"></p>
+          <div id="pairing-owner-actions" hidden>
+            <form id="pairing-invite-form" class="account-form">
+              <label for="pairing-invite-email">Email caregiver đã xác minh cần mời</label>
+              <input id="pairing-invite-email" type="email" maxlength="255" autocomplete="email" required>
+              <button type="submit" class="button secondary">Tạo mã mời</button>
+            </form>
+            <div id="pairing-issued-token" class="pairing-secret" hidden>
+              <p><strong>Mã mời (chỉ hiện một lần):</strong> <code id="pairing-issued-value"></code></p>
+              <p class="muted">Chỉ gửi mã này cho đúng email được mời qua kênh riêng đáng tin cậy.</p>
+              <button id="pairing-hide-token" type="button" class="button quiet">Ẩn mã mời</button>
+            </div>
+            <h3>Lời mời đang chờ chấp nhận</h3>
+            <div id="management-invitations" class="pairing-share-list" aria-live="polite"></div>
+            <h3>Những người đang theo dõi</h3>
+            <div id="pairing-share-list" class="pairing-share-list"></div>
+          </div>
+          <p id="pairing-viewer-message" class="muted"></p>
+        </div>
+      </section>
+
+      <section class="management-metrics" aria-label="Thống kê theo quyền hiện tại">
+        <article class="metric"><span>Fall Event trong 30 ngày</span><strong id="management-falls30">—</strong></article>
+        <article class="metric"><span>Thông báo chưa xem</span><strong id="management-unread">—</strong></article>
+        <article class="metric"><span>Lời mời đang chờ của bạn</span><strong id="management-pending">—</strong></article>
+      </section>
+      <section class="metrics" aria-label="Thống kê tổng quan">
+        <article class="metric"><div class="metric-top"><span>Thiết bị theo dõi</span><span class="metric-symbol">▣</span></div><strong id="total-devices">—</strong><small>Trong tài khoản của bạn</small></article>
+        <article class="metric"><div class="metric-top"><span>Đang online</span><span class="metric-symbol online-symbol">●</span></div><strong id="online-devices">—</strong><small>Trong lần làm mới gần nhất</small></article>
+        <article class="metric"><div class="metric-top"><span>Đang offline</span><span class="metric-symbol offline-symbol">●</span></div><strong id="offline-devices">—</strong><small>Quá thời gian heartbeat</small></article>
+        <article class="metric"><div class="metric-top"><span>Sự kiện hiển thị</span><span class="metric-symbol">◷</span></div><strong id="visible-events">—</strong><small>Chỉ tính trang đang xem</small></article>
+      </section>
+
+      <section class="device-section" id="devices-section" aria-labelledby="devices-title">
+        <div class="section-heading"><div><span class="eyebrow">THIẾT BỊ</span><h2 id="devices-title">Danh sách đang theo dõi</h2></div><button class="button text-button" id="view-all-button" type="button">Xem tất cả sự kiện →</button></div>
+        <div class="device-layout">
+          <div class="panel device-list-panel"><div class="panel-kicker">CHỌN THIẾT BỊ</div><label class="management-search-label" for="device-search">Tìm thiết bị theo mã hoặc tên</label><input id="device-search" type="search" maxlength="100" placeholder="Ví dụ: DEV-001, Thiết bị của bố"><div id="device-list" class="device-list" aria-live="polite"><p class="empty-state">Đang tải thiết bị...</p></div></div>
+          <div class="panel detail-panel" aria-live="polite">
+            <div class="panel-kicker">THÔNG TIN THIẾT BỊ</div>
+            <div id="device-detail-empty" class="empty-detail"><span class="empty-symbol">▣</span><h3>Chọn một thiết bị</h3><p class="muted">Xem trạng thái kết nối và thời điểm heartbeat cuối.</p></div>
+            <div id="device-detail" hidden><div class="detail-heading"><div><p class="eyebrow">THIẾT BỊ ĐANG CHỌN</p><h3 id="detail-name"></h3><p class="muted" id="detail-id"></p></div><span id="detail-status" class="status-pill">—</span></div><dl class="detail-grid"><div><dt>Lần heartbeat cuối</dt><dd id="detail-seen">—</dd></div><div><dt>Phiên bản AI model</dt><dd id="detail-model">—</dd></div><div><dt>Ngưỡng timeout</dt><dd id="detail-timeout">—</dd></div></dl>
+              <div id="device-actions" class="account-form">
+                <label for="rename-device-name">Đổi tên thiết bị đang chọn</label>
+                <input id="rename-device-name" type="text" maxlength="100" placeholder="Tên thiết bị">
+                <button id="rename-device-button" type="button" class="button secondary">Lưu tên</button>
+                <button id="unlink-device-button" type="button" class="button secondary">Hủy theo dõi</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="events-section" id="events-section" aria-labelledby="events-title">
+        <div class="section-heading"><div><span class="eyebrow">LỊCH SỬ</span><h2 id="events-title">Sự kiện ngã</h2><p id="event-scope" class="muted">Tất cả thiết bị được theo dõi</p></div><div class="pagination"><button id="previous-page" class="button secondary small" type="button" disabled>← Trước</button><span id="page-label">Trang 1</span><button id="next-page" class="button secondary small" type="button" disabled>Tiếp →</button></div></div>
+        <form id="history-filter-form" class="panel management-filter" aria-label="Lọc lịch sử té ngã">
+          <label>Tìm thiết bị<input id="history-search" type="search" maxlength="100" placeholder="Mã hoặc tên thiết bị"></label>
+          <label>Từ ngày<input id="history-from" type="date"></label>
+          <label>Đến hết ngày<input id="history-to" type="date"></label>
+          <label>Độ tin cậy tối thiểu<select id="history-confidence"><option value="">Tất cả</option><option value="0.5">50%</option><option value="0.7">70%</option><option value="0.85">85%</option></select></label>
+          <button class="button primary" type="submit">Áp dụng bộ lọc</button>
+          <button class="button secondary" id="history-filter-reset" type="button">Xóa lọc</button>
+          <p class="management-hint" id="history-total" role="status">Chưa tải lịch sử</p>
+        </form>
+        <div class="panel event-panel"><div class="table-scroll"><table><thead><tr><th>THỜI GIAN</th><th>THIẾT BỊ</th><th>LOẠI SỰ KIỆN</th><th>ĐỘ TIN CẬY</th><th>MODEL</th></tr></thead><tbody id="event-list"><tr><td colspan="5" class="empty-table">Đang tải lịch sử...</td></tr></tbody></table></div><p class="table-footer">Hiển thị tối đa 10 sự kiện/trang • Thời gian theo múi giờ trình duyệt</p></div>
+      </section>
+      <section class="events-section" id="notification-history" aria-labelledby="notification-history-title">
+        <div class="section-heading"><div><span class="eyebrow">NHẬT KÝ CẢNH BÁO</span><h2 id="notification-history-title">Lịch sử thông báo</h2><p class="muted">Xem thông báo đã xem và chưa xem. Đã xem không có nghĩa là sự cố đã được xử lý.</p></div></div>
+        <form id="notification-filter-form" class="panel management-filter" aria-label="Lọc lịch sử cảnh báo">
+          <label>Trạng thái<select id="notification-read-state"><option value="all">Tất cả</option><option value="unread">Chưa xem</option><option value="read">Đã xem</option></select></label>
+          <label>Tìm thiết bị<input id="notification-search" type="search" maxlength="100" placeholder="Mã hoặc tên thiết bị"></label>
+          <label>Từ ngày<input id="notification-from" type="date"></label>
+          <label>Đến hết ngày<input id="notification-to" type="date"></label>
+          <button class="button primary" type="submit">Áp dụng</button>
+          <button class="button secondary" id="notification-filter-reset" type="button">Xóa lọc</button>
+        </form>
+        <div class="panel event-panel">
+          <div class="table-scroll"><table>
+            <thead><tr><th>THỜI GIAN TẠO</th><th>THIẾT BỊ</th><th>SỰ KIỆN</th><th>TRẠNG THÁI</th><th>THAO TÁC</th></tr></thead>
+            <tbody id="management-alert-rows"><tr><td colspan="5">Đang tải lịch sử...</td></tr></tbody>
+          </table></div>
+          <div class="management-pagination"><span id="management-alert-total" role="status">—</span><button type="button" class="button secondary small" id="management-alert-prev">← Trước</button><span id="management-alert-page">Trang 1</span><button type="button" class="button secondary small" id="management-alert-next">Tiếp →</button></div>
+        </div>
+      </section>
+      <footer class="footer">FallGuard · AIoT Fall Detection · Milestone 10.8 — Dashboard Management</footer>
+    </main>
+  </div>
+</body>
+</html>

@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>FallGuard — Quản trị &amp; Demo</title>
+  <link rel="stylesheet" href="/admin-assets/admin.css">
+  <script src="/admin-assets/admin.js" defer></script>
+</head>
+<body>
+  <div id="login-screen" class="login-shell">
+    <div class="login-brand"><span class="brand-mark">✦</span><span>FallGuard <small>Admin Console</small></span></div>
+    <section class="login-card" aria-labelledby="login-title">
+      <div class="eyebrow">DÀNH CHO QUẢN TRỊ VIÊN</div>
+      <h1 id="login-title">Đăng nhập quản trị</h1>
+      <p>Dùng tài khoản đã được cấp quyền admin và xác minh email. Caregiver thông thường không thể truy cập dữ liệu quản trị.</p>
+      <form id="login-form">
+        <label for="login-email">Email quản trị</label>
+        <input id="login-email" type="email" required autocomplete="username" placeholder="admin@example.com">
+        <label for="login-password">Mật khẩu</label>
+        <input id="login-password" type="password" required autocomplete="current-password" placeholder="Nhập mật khẩu">
+        <button type="submit" class="button primary full">Đăng nhập</button>
+      </form>
+      <p id="login-error" class="error-message" role="alert" aria-live="polite"></p>
+      <a href="/dashboard" class="secondary-link">Quay về Dashboard caregiver</a>
+    </section>
+  </div>
+
+  <div id="app-shell" class="shell" hidden>
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-mark">✦</span><span>FallGuard<small>CONTROL CENTER</small></span></div>
+      <div class="nav-caption">QUẢN LÝ DEMO</div>
+      <nav id="navigation" aria-label="Điều hướng quản trị">
+        <button class="nav-item active" data-section="overview">▦ <span>Tổng quan</span></button>
+        <button class="nav-item" data-section="devices">▣ <span>Thiết bị</span></button>
+        <button class="nav-item" data-section="accounts">♙ <span>Tài khoản &amp; chia sẻ</span></button>
+        <button class="nav-item" data-section="events">≡ <span>Sự kiện té ngã</span></button>
+        <button class="nav-item" data-section="simulation">✧ <span>Mô phỏng &amp; kiểm thử</span></button>
+        <button class="nav-item" data-section="audit">◷ <span>Nhật ký hệ thống</span></button>
+      </nav>
+      <div class="side-foot"><span class="signal-dot"></span> Môi trường demo<br><small>API nhạy cảm chỉ dành cho admin</small></div>
+    </aside>
+
+    <div class="main-column">
+      <header class="topbar">
+        <div><span class="mobile-label">FALLGUARD ADMIN</span><h1 id="page-title">Tổng quan hệ thống</h1><p id="page-subtitle">Theo dõi hoạt động và chuẩn bị trình diễn với giảng viên.</p></div>
+        <div class="top-actions"><span id="current-admin" class="account-chip">—</span><button id="refresh-page" class="button ghost" type="button">↻ Làm mới</button><button id="logout-btn" class="button ghost" type="button">Đăng xuất</button></div>
+      </header>
+      <main class="main-content">
+        <p id="global-error" class="error-banner" hidden role="alert"></p>
+
+        <section id="section-overview" class="page-section">
+          <div class="section-heading"><div><h2>Tình trạng hệ thống</h2><p>Những thông tin cần nhìn thấy trước khi bắt đầu demo.</p></div><span class="pill muted">Dữ liệu từ PostgreSQL</span></div>
+          <div class="stats-grid">
+            <div class="stat-card"><span class="stat-symbol">▣</span><span class="stat-label">Thiết bị</span><strong id="stat-devices">—</strong><small>Đã đăng ký trên Backend</small></div>
+            <div class="stat-card"><span class="stat-symbol">●</span><span class="stat-label">Đang online</span><strong id="stat-online">—</strong><small>Heartbeat trong 45 giây</small></div>
+            <div class="stat-card"><span class="stat-symbol">♙</span><span class="stat-label">Caregiver</span><strong id="stat-accounts">—</strong><small>Tài khoản đã tạo</small></div>
+            <div class="stat-card"><span class="stat-symbol">!</span><span class="stat-label">FallEvent</span><strong id="stat-events">—</strong><small>Ghi nhận trong PostgreSQL</small></div>
+          </div>
+          <div class="two-col">
+            <div class="panel"><div class="panel-title"><h3>Luồng trình diễn gợi ý</h3><span class="pill">6 bước</span></div>
+              <ol class="demo-steps"><li>Đăng nhập caregiver ở Dashboard.</li><li>Chọn thiết bị DEV-001 hoặc DEV-002.</li><li>Xem Owner và danh sách người theo dõi.</li><li>Chọn “Mô phỏng &amp; kiểm thử” trong Admin.</li><li>Gửi một sự kiện ngã mô phỏng.</li><li>Quan sát cảnh báo trên Dashboard caregiver.</li></ol>
+            </div>
+            <div class="panel"><div class="panel-title"><h3>Kiểm tra nhanh</h3></div><p class="muted">Kiểm tra Database và các bảng quan trọng, không chạy lệnh kiểm thử hệ thống trên Server.</p><button id="run-diagnostics" class="button secondary">Chạy kiểm tra nhanh</button><div id="diagnostics-output" class="check-list"><p class="muted">Chưa chạy kiểm tra.</p></div></div>
+          </div>
+        </section>
+
+        <section id="section-devices" class="page-section" hidden>
+          <div class="section-heading"><div><h2>Quản lý thiết bị</h2><p>Xem trạng thái, owner và người theo dõi; không hiển thị Device Key.</p></div></div>
+          <div class="panel"><div class="filter-row"><label class="search-box">Tìm mã thiết bị<input id="device-search" type="search" placeholder="VD: DEV-001"></label><button id="device-search-btn" class="button secondary">Tìm kiếm</button></div><div class="table-wrap"><table><thead><tr><th>Device ID</th><th>Trạng thái</th><th>Owner</th><th>Đang theo dõi</th><th>Thao tác</th></tr></thead><tbody id="device-table"></tbody></table></div><div id="watcher-panel" class="subpanel" hidden><h3 id="watcher-title">Người theo dõi</h3><div id="watcher-list"></div></div></div>
+        </section>
+
+        <section id="section-accounts" class="page-section" hidden>
+          <div class="section-heading"><div><h2>Tài khoản &amp; quyền chia sẻ</h2><p>Tra cứu tài khoản và xác nhận ai đã liên kết với thiết bị.</p></div></div>
+          <div class="panel"><div class="filter-row"><label class="search-box">Email<input id="account-search" type="search" placeholder="Tìm email"></label><button id="account-search-btn" class="button secondary">Tìm kiếm</button></div><div class="table-wrap"><table><thead><tr><th>Account</th><th>Email</th><th>Xác minh</th><th>Thiết bị theo dõi</th><th>Quyền</th></tr></thead><tbody id="account-table"></tbody></table></div><p class="helper">Để mời hoặc thu hồi quyền caregiver, sử dụng Dashboard của chủ sở hữu. Admin không tự thay đổi quyền Owner.</p></div>
+        </section>
+
+        <section id="section-events" class="page-section" hidden>
+          <div class="section-heading"><div><h2>Lịch sử FallEvent</h2><p>Kiểm tra sự kiện đã được lưu và số cảnh báo gửi vào hàng đợi của caregiver.</p></div></div>
+          <div class="panel"><div class="filter-row"><label class="search-box">Device ID<input id="events-device" type="search" placeholder="Tất cả thiết bị"></label><button id="events-search-btn" class="button secondary">Lọc</button></div><div class="table-wrap"><table><thead><tr><th>Event ID</th><th>Thiết bị</th><th>Thời gian</th><th>Độ tin cậy</th><th>Model</th><th>Thông báo</th></tr></thead><tbody id="events-table"></tbody></table></div><div class="table-footer"><span id="events-total" class="muted">—</span><div class="inline-actions"><button id="events-prev" class="button ghost" type="button">← Trước</button><button id="events-next" class="button ghost" type="button">Tiếp →</button></div></div></div>
+        </section>
+
+        <section id="section-simulation" class="page-section" hidden>
+          <div class="section-heading"><div><h2>Mô phỏng &amp; kiểm thử</h2><p>Thay thao tác thủ công trên Swagger bằng một form dễ thao tác khi trình bày.</p></div><span id="demo-mode-badge" class="pill">Đang kiểm tra cấu hình…</span></div>
+          <div class="two-col">
+            <div class="panel"><div class="panel-title"><h3>Tạo sự kiện ngã giả lập</h3></div><p class="muted">Chỉ bật trong môi trường phát triển. Một lần bấm sẽ tạo FallEvent và AlertNotification bằng cùng service của ESP32.</p>
+              <form id="simulate-form"><label for="simulation-device">Thiết bị cần thử</label><select id="simulation-device" required><option value="">Chọn thiết bị</option></select><label for="simulation-confidence">Độ tin cậy mô phỏng</label><div class="range-head"><input id="simulation-confidence" type="range" min="50" max="100" value="95" step="1"><strong id="confidence-label">95%</strong></div><button id="simulate-btn" type="submit" class="button primary full">⚡ Gửi FallEvent mô phỏng</button></form>
+              <p class="warning-text">Chỉ kiểm thử trên hệ thống demo. Bản ghi thật sự được tạo trong Database, gắn model_version = demo_admin và caregiver sẽ nhận cảnh báo mô phỏng.</p>
+              <div id="simulate-result" class="result-box" hidden role="status"></div>
+            </div>
+            <div class="panel"><div class="panel-title"><h3>Cấp mã ghép nối thử nghiệm</h3></div><p class="muted">Dùng khi Device chưa có Owner và chưa có liên kết cũ. Không cần nhập Pairing Admin Key vào trình duyệt.</p>
+              <label for="pairing-device">Thiết bị</label><select id="pairing-device"><option value="">Chọn thiết bị</option></select><button id="pairing-btn" class="button secondary full" type="button">Tạo mã ghép nối</button>
+              <div id="pairing-result" class="result-box" hidden role="status"></div><p class="helper">Nếu báo “Thiết bị có liên kết cũ”, hãy dùng quy trình bootstrap mà bạn đã kiểm thử ở Milestone 10.7.</p>
+            </div>
+          </div>
+        </section>
+
+        <section id="section-audit" class="page-section" hidden>
+          <div class="section-heading"><div><h2>Nhật ký hoạt động bảo mật</h2><p>Chỉ hiển thị actor, hành động, kết quả và request ID — không hiển thị token.</p></div></div>
+          <div class="panel"><div class="table-wrap"><table><thead><tr><th>Thời gian</th><th>Account ID</th><th>Hành động</th><th>Kết quả</th><th>Request ID</th></tr></thead><tbody id="audit-table"></tbody></table></div></div>
+        </section>
+      </main>
+    </div>
+  </div>
+  <div id="toast" class="toast" hidden role="status" aria-live="polite"></div>
+</body>
+</html>
