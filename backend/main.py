@@ -14,6 +14,7 @@ from database import SessionLocal
 from security_routes import router as security_router
 from security_middleware import SecurityGateMiddleware, security_http_audit
 from security_config import validate_runtime_configuration, setup_stdout_logs
+from reliability_routes import router as reliability_router
 
 from auth_routes import router as auth_router
 from google_routes import router as google_router
@@ -86,6 +87,7 @@ app.include_router(device_status_router)
 app.include_router(fall_edge_router)
 app.include_router(device_history_router)
 app.include_router(history_router)
+app.include_router(reliability_router)
 
 # API thông báo bền vững và WebSocket cảnh báo thời gian thực.
 app.include_router(alerts_router)
