@@ -53,6 +53,8 @@ setup_stdout_logs()
 app = FastAPI(
     title="AIoT Fall Detection Backend",
     description="Backend cho hệ thống AIoT phát hiện té ngã.",
+    docs_url=None,
+    redoc_url=None,
 )
 
 # Middleware lưu state/nonce của OIDC trong cookie ký số HttpOnly.
@@ -98,6 +100,10 @@ app.include_router(alerts_ws_router)
 app.include_router(model_admin_router)
 app.include_router(model_edge_router)
 app.include_router(admin_router)
+from swagger_presentation import install_swagger_presentation
+
+# Đăng ký hai giao diện tài liệu API của FallGuard.
+install_swagger_presentation(app)
 
 # Phục vụ CSS và JavaScript cùng nguồn với API để không cần CORS.
 app.mount(
