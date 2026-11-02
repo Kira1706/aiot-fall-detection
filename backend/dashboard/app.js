@@ -512,6 +512,10 @@ function receiveAlert(data) {
   if (pendingAlerts.has(data.notification_id)) return;
   pendingAlerts.set(data.notification_id, data);
   renderAlertList();
+  if (window.FallGuardNotifier && typeof window.FallGuardNotifier.onNewAlert === "function") {
+    window.FallGuardNotifier.onNewAlert(data);
+  }
+
   // Lịch sử ngã vẫn lấy từ API có phân quyền như Milestone 7.
   refreshDashboard();
   if (typeof dashboardManagementRefresh === "function") void dashboardManagementRefresh();

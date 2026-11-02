@@ -1,0 +1,34 @@
+/* Giao diện cảnh báo mới không thay đổi style của Dashboard hiện tại. */
+.fg-alert-settings {
+  border: 1px solid #d7e0ee;
+  border-radius: 14px;
+  background: #f8fbff;
+  padding: 16px;
+  margin: 0 0 18px;
+  color: #172b4d;
+}
+.fg-alert-settings p { margin: 6px 0 10px; line-height: 1.5; }
+.fg-alert-settings-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.fg-alert-status { font-size: 0.9rem; color: #345374; }
+.fg-fall-popup {
+  position: fixed;
+  z-index: 10000;
+  top: 20px;
+  right: 20px;
+  width: min(430px, calc(100vw - 32px));
+  box-sizing: border-box;
+  border: 2px solid #dc2626;
+  border-radius: 16px;
+  background: #fff;
+  color: #2b1720;
+  box-shadow: 0 16px 44px rgba(30, 41, 59, 0.27);
+  padding: 20px;
+}
+.fg-fall-popup[hidden] { display: none !important; }
+.fg-fall-popup h3 { margin: 0 0 9px; font-size: 1.25rem; color: #b91c1c; }
+.fg-fall-popup p { margin: 8px 0; line-height: 1.5; }
+.fg-fall-popup-hint { font-size: 0.9rem; color: #4b5563; }
+.fg-fall-popup-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+@media (max-width: 520px) {
+  .fg-fall-popup { top: 12px; right: 12px; width: calc(100vw - 24px); padding: 16px; }
+}
