@@ -154,3 +154,8 @@ def readiness():
     except Exception:
         raise HTTPException(status_code=503, detail="Database chưa sẵn sàng.")
     return {"status": "ready"}
+
+
+# Phương án B: yêu cầu caregiver xác minh email trước khi theo dõi.
+from email_only_policy import install_email_only_policy
+install_email_only_policy(app)

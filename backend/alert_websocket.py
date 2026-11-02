@@ -66,6 +66,10 @@ async def alerts_socket(
         except HTTPException:
             await websocket.close(code=4401)
             return
+        # Chỉ cho phép email đã xác minh nhận cảnh báo realtime.
+        if account.email_verified_at is None:
+            await websocket.close(code=4403)
+            return
         account_id = account.account_id
 
         expiry = int(payload["exp"])
@@ -81,7 +85,11 @@ async def alerts_socket(
             db.rollback()
             # Token có thể bị thu hồi khi WebSocket vẫn đang mở.
             try:
-                authenticate_secure_token(token, db)
+                # Kiểm tra lại tài khoản sau mỗi vòng thăm dò PostgreSQL.
+                current_account, _ = authenticate_secure_token(token, db)
+                if current_account.email_verified_at is None:
+                    await websocket.close(code=4403)
+                    return
             except HTTPException:
                 await websocket.close(code=4401)
                 return

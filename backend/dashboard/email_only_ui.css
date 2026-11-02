@@ -1,0 +1,15 @@
+/* Phương án B: ẩn liên kết Google nhưng giữ nguyên cơ chế Backend cũ. */
+#google-button,
+.auth-divider,
+.login-hint,
+.account-form:has(#link-google-button) { display: none !important; }
+#email-only-pending[hidden] { display: none !important; }
+#email-only-pending { padding: 8px 0 14px; }
+#email-only-pending h3 { margin: 14px 0 12px; font-size: 1.15rem; }
+#email-only-pending p { color: #526177; line-height: 1.6; font-size: .88rem; }
+#email-only-feedback { padding: 12px; border-radius: 10px; background: #eff6ff; }
+#email-only-pending .button { margin-top: 12px; }
+/* Bảo đảm thuộc tính hidden không bị layout form ghi đè. */
+#forgot-toggle[hidden],
+#auth-switch-button[hidden],
+#auth-switch-caption[hidden] { display: none !important; }
