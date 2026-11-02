@@ -11,6 +11,9 @@ from fall_event_schemas import FallEventCreate, FallEventResponse
 from models import AccountDevice, AlertNotification, FallEvent
 
 
+from fall_email_service import enqueue_event_emails
+
+
 class EventIdConflictError(Exception):
     """UUID đã tồn tại nhưng nội dung sự kiện gửi lại không trùng khớp."""
 
@@ -84,6 +87,9 @@ def save_fall_event(
                 ]
             )
             # Chỉ xác nhận HTTP 201 sau khi cả sự kiện và thông báo được commit.
+            # Ghi email vào hàng đợi trước khi commit FallEvent.
+            db.flush()
+            enqueue_event_emails(db, new_id)
             db.commit()
             return db.get(FallEvent, new_id), False
 

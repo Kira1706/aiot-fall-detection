@@ -15,7 +15,7 @@ from sqlalchemy.orm import sessionmaker
 
 from database import Base, get_db
 from main import app
-from models import AccountDevice, AlertNotification, Device, FallEvent
+from models import Account, AccountDevice, AlertNotification, Device, FallEvent
 
 
 def register_and_login(client: TestClient, email: str) -> tuple[int, str]:
@@ -83,7 +83,14 @@ def run_tests():
                 with TestClient(app) as client:
                     id_a, token_a = register_and_login(client, "alert-a@example.com")
                     id_b, token_b = register_and_login(client, "alert-b@example.com")
-                    _, token_c = register_and_login(client, "alert-c@example.com")
+                    id_c, token_c = register_and_login(client, "alert-c@example.com")
+                    # Chỉ xác minh các tài khoản trong SQLite kiểm thử.
+                    with TestSessionLocal() as db:
+                        for account_id in (id_a, id_b, id_c):
+                            account = db.get(Account, account_id)
+                            assert account is not None
+                            account.email_verified_at = datetime.now(timezone.utc)
+                        db.commit()
                     with TestSessionLocal() as db:
                         db.add_all([
                             Device(device_id="DEV-001", status="offline", model_version="model_v1"),
@@ -100,7 +107,9 @@ def run_tests():
 
                     for url in ("/alerts",):
                         assert client.get(url).status_code == 401
-                    assert client.get("/alerts", headers=auth(token_c)).json() == []
+                    response = client.get("/alerts", headers=auth(token_c))
+                    assert response.status_code == 200, response.text
+                    assert response.json() == []
                     print("[PASS] REST yêu cầu JWT, caregiver không liên kết không có cảnh báo")
 
                     payload = {
