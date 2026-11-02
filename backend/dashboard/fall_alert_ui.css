@@ -32,3 +32,10 @@
 @media (max-width: 520px) {
   .fg-fall-popup { top: 12px; right: 12px; width: calc(100vw - 24px); padding: 16px; }
 }
+/* Điều khiển âm lượng và nút dừng chuông luôn dễ nhận thấy. */
+.fg-alarm-volume-label { display: flex; align-items: center; gap: 12px; margin-top: 12px; flex-wrap: wrap; font-weight: 600; }
+.fg-alarm-volume { width: min(240px, 60vw); accent-color: #dc2626; }
+.fg-stop-alarm { border-color: #dc2626 !important; color: #b91c1c !important; font-weight: 700; }
+.fg-fall-popup:not([hidden]) { animation: fg-alert-flash 1.8s ease-in-out infinite; }
+@keyframes fg-alert-flash { 0%, 100% { box-shadow: 0 12px 40px rgba(220,38,38,.2); } 50% { box-shadow: 0 12px 48px rgba(220,38,38,.55); } }
+@media (prefers-reduced-motion: reduce) { .fg-fall-popup:not([hidden]) { animation: none; } }
